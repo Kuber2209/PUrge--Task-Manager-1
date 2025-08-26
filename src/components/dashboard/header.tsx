@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import type { User, Notification as NotificationType } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Bell, Briefcase, Megaphone, MessageSquare, CheckCircle2, FileUp, Replace, LogOut, Loader2 } from 'lucide-react';
+import { Bell, Tie, Megaphone, MessageSquare, CheckCircle2, FileUp, Replace, LogOut, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
@@ -85,7 +85,7 @@ export function Header() {
   return (
     <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 z-10">
       <Link href="/dashboard" className="flex items-center gap-3">
-        <Briefcase className="h-6 w-6 text-primary" />
+        <Tie className="h-6 w-6 text-primary" />
         <h1 className="text-xl font-bold font-headline text-foreground">PUrge BPHC</h1>
       </Link>
       <div className="ml-auto flex items-center gap-4">

@@ -6,7 +6,7 @@ import type { User, Task } from '@/lib/types';
 import { getUsers, getTasks } from '@/services/firestore';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Briefcase, ArrowRight } from 'lucide-react';
+import { Tie, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Skeleton } from '../ui/skeleton';
@@ -99,7 +99,7 @@ function UserProfile({ user, allTasks, index }: { user: User, allTasks: Task[], 
         <div>
           <CardTitle className="font-headline">{user.name}</CardTitle>
           <p className="text-sm text-muted-foreground flex items-center gap-2">
-            <Briefcase className="h-4 w-4" />{user.role}
+            <Tie className="h-4 w-4" />{user.role}
           </p>
         </div>
       </CardHeader>

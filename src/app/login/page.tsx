@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Briefcase, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Tie, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -118,7 +118,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="flex justify-center items-center gap-2 mb-4">
-            <Briefcase className="h-8 w-8 text-primary" />
+            <Tie className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold font-headline">PUrge BPHC</h1>
           </div>
           <CardTitle className="text-2xl">Login</CardTitle>
