@@ -118,6 +118,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = () => {
     const provider = new GoogleAuthProvider();
+    // Add the calendar scope to request permission to manage calendar events.
+    // This is the first step needed for calendar synchronization.
+    provider.addScope('https://www.googleapis.com/auth/calendar.events');
     return signInWithPopup(auth, provider);
   }
 
