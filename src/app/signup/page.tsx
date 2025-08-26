@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Tie, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -51,6 +51,15 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
         fill="#1976D2"
         d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C42.012,36.49,44,30.686,44,24C44,22.659,43.862,21.35,43.611,20.083z"
       />
+    </svg>
+  );
+}
+
+function TieIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 22s-4-4-4-9V3h8v10s-4 4-4 9z"/>
+      <path d="M10.5 7.5a1.5 1.5 0 0 1 3 0"/>
     </svg>
   );
 }
@@ -111,7 +120,7 @@ export default function SignupPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
             <div className="flex justify-center items-center gap-2 mb-4">
-            <Tie className="h-8 w-8 text-primary" />
+            <TieIcon className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold font-headline">PUrge BPHC</h1>
         </div>
         <CardTitle className="text-2xl">Create an account</CardTitle>

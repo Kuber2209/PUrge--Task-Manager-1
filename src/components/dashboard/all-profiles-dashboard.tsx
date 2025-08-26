@@ -6,13 +6,22 @@ import type { User, Task } from '@/lib/types';
 import { getUsers, getTasks } from '@/services/firestore';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tie, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Skeleton } from '../ui/skeleton';
 
 interface AllProfilesDashboardProps {
   currentUser: User;
+}
+
+function TieIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 22s-4-4-4-9V3h8v10s-4 4-4 9z"/>
+      <path d="M10.5 7.5a1.5 1.5 0 0 1 3 0"/>
+    </svg>
+  );
 }
 
 export function AllProfilesDashboard({ currentUser }: AllProfilesDashboardProps) {
@@ -99,7 +108,7 @@ function UserProfile({ user, allTasks, index }: { user: User, allTasks: Task[], 
         <div>
           <CardTitle className="font-headline">{user.name}</CardTitle>
           <p className="text-sm text-muted-foreground flex items-center gap-2">
-            <Tie className="h-4 w-4" />{user.role}
+            <TieIcon className="h-4 w-4" />{user.role}
           </p>
         </div>
       </CardHeader>

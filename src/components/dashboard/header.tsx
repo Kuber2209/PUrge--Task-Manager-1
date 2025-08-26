@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import type { User, Notification as NotificationType } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Bell, Tie, Megaphone, MessageSquare, CheckCircle2, FileUp, Replace, LogOut, Loader2 } from 'lucide-react';
+import { Bell, Megaphone, MessageSquare, CheckCircle2, FileUp, Replace, LogOut, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
@@ -18,6 +18,16 @@ import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } 
 import { getMessaging, onMessage } from 'firebase/messaging';
 import { app } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+
+function TieIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 22s-4-4-4-9V3h8v10s-4 4-4 9z"/>
+      <path d="M10.5 7.5a1.5 1.5 0 0 1 3 0"/>
+    </svg>
+  );
+}
+
 
 export function Header() {
   const { user, logOut } = useAuth();
@@ -85,7 +95,7 @@ export function Header() {
   return (
     <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 z-10">
       <Link href="/dashboard" className="flex items-center gap-3">
-        <Tie className="h-6 w-6 text-primary" />
+        <TieIcon className="h-6 w-6 text-primary" />
         <h1 className="text-xl font-bold font-headline text-foreground">PUrge BPHC</h1>
       </Link>
       <div className="ml-auto flex items-center gap-4">
