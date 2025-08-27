@@ -9,7 +9,6 @@ export interface User {
   role: UserRole;
   avatar: string;
   email: string;
-  notificationTokens?: string[]; // Array of FCM tokens for push notifications
 }
 
 export interface Message {
@@ -40,17 +39,6 @@ export interface Announcement {
   createdAt: string; // ISO string
   documents?: Document[];
   audience?: AnnouncementAudience;
-}
-
-export interface Notification {
-  id: string;
-  type: 'announcement' | 'task' | 'chat' | 'document' | 'transfer' | 'unassign';
-  title: string;
-  description: string;
-  createdAt: string; // ISO string
-  read: boolean;
-  link: string;
-  recipientId: string; // The user who should receive this notification
 }
 
 export interface Task {

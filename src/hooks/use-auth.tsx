@@ -8,17 +8,6 @@ import type { User, UserRole } from '@/lib/types';
 import { createUserProfile, getUserProfile } from '@/services/firestore';
 import { toast } from '@/hooks/use-toast';
 
-// --- IMPORTANT ---
-// This is a whitelist of emails that are allowed to access the application.
-// In a production app, you might manage this list in your Firestore database.
-// For this prototype, add all authorized PU member emails here.
-const ALLOWED_EMAILS = [
-  'f20210000@hyderabad.bits-pilani.ac.in', // Replace with actual PU member emails
-  'f20210001@hyderabad.bits-pilani.ac.in', // Add as many as you need
-  'f20240819@hyderabad.bits-pilani.ac.in',
-  'f20240522@hyderabad.bits-pilani.ac.in',
-];
-
 interface AuthContextType {
   user: User | null;
   firebaseUser: FirebaseUser | null;
@@ -41,23 +30,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("onAuthStateChanged triggered");
       try {
         if (fbUser) {
-          // Security Check: For social logins, ensure the user's email is in the allowed list.
-          const isGoogleSignIn = fbUser.providerData.some(p => p.providerId === GoogleAuthProvider.PROVIDER_ID);
-          if (isGoogleSignIn && (!fbUser.email || !ALLOWED_EMAILS.includes(fbUser.email.toLowerCase()))) {
-            console.warn(`Unauthorized Google login attempt from: ${fbUser.email}. Signing out.`);
-            toast({ 
-                variant: 'destructive',
-                title: 'Access Denied', 
-                description: 'Please sign in with your authorized BITS Pilani ID.' 
-            });
-            await signOut(auth); // Force sign out immediately
-            setUser(null);
-            setFirebaseUser(null);
-            setLoading(false);
-            return; // Stop further processing for this user
-          }
-
-          // If email is valid, or if it was an email/password login, proceed.
           console.log("onAuthStateChanged: Firebase User found:", fbUser.uid, fbUser.email);
           setFirebaseUser(fbUser);
           
@@ -74,7 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 email: fbUser.email || '',
                 role: 'Associate', 
                 avatar: fbUser.photoURL || `https://i.pravatar.cc/150?u=${fbUser.uid}`,
-                notificationTokens: [],
             };
             await createUserProfile(newUser);
             setUser(newUser);
@@ -110,7 +81,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: fbUser.email || '',
         role: 'Associate',
         avatar: `https://i.pravatar.cc/150?u=${fbUser.uid}`,
-        notificationTokens: [],
     };
     await createUserProfile(newUser);
     setUser(newUser); // Set user immediately after creation

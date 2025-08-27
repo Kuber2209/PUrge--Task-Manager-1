@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, User as UserIcon, Calendar, Tag, Users, Check, Send, Clock, Upload, Download, Replace, FileText, Globe, MessageSquareQuote, X } from 'lucide-react';
-import type { Task, User, Message, Document, Notification as NotificationType } from '@/lib/types';
+import type { Task, User, Message, Document } from '@/lib/types';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
-import { getTask, getTaskUsers, updateTask, createNotification, getUsers } from '@/services/firestore';
+import { getTask, getTaskUsers, updateTask, getUsers } from '@/services/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
@@ -144,23 +144,6 @@ export default function TaskDetailPage() {
 
     const updatedMessages = [...(task.messages || []), message];
     await onTaskUpdate({ messages: updatedMessages });
-
-    const notificationRecipients = new Set<string>();
-    task.assignedTo.forEach(id => notificationRecipients.add(id));
-    notificationRecipients.add(task.createdBy);
-    
-    // Remove current user from notification list
-    notificationRecipients.delete(currentUser.id);
-
-    for (const userId of Array.from(notificationRecipients)) {
-      await createNotification({
-        recipientId: userId,
-        type: 'chat',
-        title: `New Message in "${task.title}"`,
-        description: `${currentUser.name} said: "${newMessage.substring(0, 30)}..."`,
-        link: `/task/${task.id}`,
-      });
-    }
 
     setNewMessage('');
     setReplyTo(null);
@@ -419,17 +402,6 @@ function DocumentCard({ task, currentUser, onTaskUpdate }: { task: Task; current
         const updatedDocuments = [...(task.documents || []), newDocument];
         await onTaskUpdate({ documents: updatedDocuments });
         
-        const otherUsers = task.assignedTo.filter(id => id !== currentUser.id);
-        for(const userId of otherUsers) {
-             await createNotification({
-                recipientId: userId,
-                type: 'document',
-                title: `New Document in "${task.title}"`,
-                description: `${currentUser.name} uploaded "${docName}".`,
-                link: `/task/${task.id}`
-            });
-        }
-        
         toast({ title: "Document uploaded!" });
         setDocName('');
         setOpen(false);
@@ -519,14 +491,6 @@ function TransferTaskCard({ task, currentUser, onTaskUpdate }: { task: Task; cur
         newAssignedTo.push(selectedAssociate);
         
         await onTaskUpdate({ assignedTo: newAssignedTo });
-
-        await createNotification({
-            recipientId: selectedAssociate,
-            type: 'transfer',
-            title: `Task Assigned to You: "${task.title}"`,
-            description: `${currentUser.name} transferred this task to you.`,
-            link: `/task/${task.id}`,
-        });
         
         toast({ title: 'Task Transferred Successfully!' });
         setOpen(false);
@@ -537,18 +501,6 @@ function TransferTaskCard({ task, currentUser, onTaskUpdate }: { task: Task; cur
         const newAssignedTo = task.assignedTo.filter(id => id !== currentUser.id);
         const newStatus = newAssignedTo.length === 0 ? 'Open' : task.status;
         await onTaskUpdate({ assignedTo: newAssignedTo, status: newStatus });
-        
-        const allOtherAssociates = await getUsers().then(users => users.filter(u => u.role === 'Associate' && u.id !== currentUser.id));
-
-        for (const associate of allOtherAssociates) {
-            await createNotification({
-                recipientId: associate.id,
-                type: 'unassign',
-                title: `Task now available: "${task.title}"`,
-                description: `${currentUser.name} has left this task, and it is now open.`,
-                link: `/task/${task.id}`
-            });
-        }
         
         toast({ title: 'You have left the task.', description: 'It is now available for others to accept.' });
         router.push('/dashboard');

@@ -1,7 +1,7 @@
 
 
 import { db } from '@/lib/firebase';
-import type { User, Task, Announcement, Notification, AnnouncementAudience } from '@/lib/types';
+import type { User, Task, Announcement, AnnouncementAudience } from '@/lib/types';
 import {
   collection,
   doc,
@@ -273,64 +273,3 @@ export const deleteAnnouncement = async (announcementId: string): Promise<void> 
     const announcementRef = doc(db, 'announcements', announcementId);
     await deleteDoc(announcementRef);
 };
-
-
-// == NOTIFICATION FUNCTIONS ==
-
-// Create a new notification
-export const createNotification = async (notificationData: Omit<Notification, 'id' | 'read' | 'createdAt'>): Promise<void> => {
-    const notificationsCollection = collection(db, 'notifications');
-    await addDoc(notificationsCollection, {
-        ...notificationData,
-        read: false,
-        createdAt: new Date().toISOString()
-    });
-};
-
-// Get notifications for a user with real-time updates and pagination
-export const getNotifications = (
-    userId: string, 
-    callback: (data: { notifications: Notification[], totalCount: number }) => void,
-    count: number
-): (() => void) => {
-    const notificationsCollection = collection(db, 'notifications');
-    const q = query(
-        notificationsCollection,
-        where('recipientId', '==', userId),
-        orderBy('createdAt', 'desc'),
-        limit(count)
-    );
-
-    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-        const notifications = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
-        
-        // Get the total count of notifications for the user to support "Load More"
-        const countQuery = query(notificationsCollection, where('recipientId', '==', userId));
-        const totalCountSnapshot = await getCountFromServer(countQuery);
-        const totalCount = totalCountSnapshot.data().count;
-
-        callback({ notifications, totalCount });
-    });
-
-    return unsubscribe;
-};
-
-
-// Mark a notification as read
-export const markNotificationAsRead = async (notificationId: string): Promise<void> => {
-    const notifRef = doc(db, 'notifications', notificationId);
-    await updateDoc(notifRef, { read: true });
-}
-
-// Mark all notifications for a user as read
-export const markAllNotificationsAsRead = async (userId: string): Promise<void> => {
-    const batch = writeBatch(db);
-    const notificationsCollection = collection(db, 'notifications');
-    const q = query(notificationsCollection, where('recipientId', '==', userId), where('read', '==', false));
-    const querySnapshot = await getDocs(q);
-    querySnapshot.forEach(doc => {
-        batch.update(doc.ref, { read: true });
-    });
-    await batch.commit();
-}
-

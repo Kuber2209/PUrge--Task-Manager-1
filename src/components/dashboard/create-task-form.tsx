@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
-import { createTask, updateTask, createNotification, getUsers } from '@/services/firestore';
+import { createTask, updateTask, getUsers } from '@/services/firestore';
 import { ScrollArea } from '../ui/scroll-area';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -226,17 +226,6 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
         
         const newTask = await createTask(newTaskData);
 
-        // Notify directly assigned users
-        for (const userId of (data.assignedTo || [])) {
-            await createNotification({
-                recipientId: userId,
-                type: 'task',
-                title: `You've been assigned a new task: "${newTask.title}"`,
-                description: `Created by ${data.isAnonymous ? `a ${currentUser.role}` : currentUser.name}.`,
-                link: `/task/${newTask.id}`
-            })
-        }
-        
         toast({
           title: 'Task Created!',
           description: `The task "${data.title}" has been posted.`,
