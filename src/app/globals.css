@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -97,6 +98,10 @@
       }
   }
 
+  .dark .task-card:hover {
+      box-shadow: 0 0 20px 0px hsl(var(--primary) / 0.5);
+  }
+
   .btn-bounce {
       transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
@@ -120,3 +125,4 @@
     @apply absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-destructive;
   }
 }
+
