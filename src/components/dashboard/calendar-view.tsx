@@ -114,9 +114,10 @@ export function CalendarView() {
                             <button
                                 onClick={() => handleDayClick(day)}
                                 className={cn(
-                                    "w-10 h-10 flex items-center justify-center rounded-full mx-auto relative transition-colors duration-300",
+                                    "w-10 h-10 flex items-center justify-center rounded-full mx-auto relative transition-all duration-200 ease-in-out",
+                                    "hover:scale-110",
                                     {
-                                        "bg-primary text-primary-foreground font-semibold shadow-lg": isSelected,
+                                        "bg-primary text-primary-foreground font-semibold shadow-lg scale-110": isSelected,
                                         "hover:bg-muted": !isSelected,
                                         "text-muted-foreground": isPast(day) && !isToday(day) && !isSelected,
                                         "font-bold text-primary": isToday(day) && !isSelected,
