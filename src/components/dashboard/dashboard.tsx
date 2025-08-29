@@ -24,25 +24,27 @@ export function Dashboard() {
   const { toast } = useToast();
   
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || typeof window === 'undefined') return;
     
     const requestPermissionAndSetupNotifications = async () => {
-        if (!('Notification' in window)) {
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
             console.log("This browser does not support desktop notification");
             return;
         }
 
-        // Only ask for permission if it's not already granted or denied
         if (Notification.permission === 'default') {
             console.log('Requesting notification permission...');
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                await setupFcmToken();
-            } else {
-                console.log('User denied notification permission.');
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    await setupFcmToken();
+                } else {
+                    console.log('User denied notification permission.');
+                }
+            } catch (err) {
+                console.error('Error requesting notification permission', err);
             }
         } else if (Notification.permission === 'granted') {
-            // If permission is already granted, just ensure the token is set up
             await setupFcmToken();
         }
     }
@@ -51,13 +53,10 @@ export function Dashboard() {
         if (!currentUser) return;
         try {
             const messaging = getMessaging(app);
-            // The VAPID key is a security measure for web push notifications
             const currentToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
             
             if (currentToken) {
-                // Check if the user's profile already has this token
                 if (!currentUser.notificationTokens?.includes(currentToken)) {
-                    // If not, add it. This is a 'write' operation.
                     await updateUserProfile(currentUser.id, { 
                         notificationTokens: arrayUnion(currentToken) 
                     });
@@ -72,7 +71,6 @@ export function Dashboard() {
         }
     };
 
-    // Use a small timeout to let the page settle before asking for permission
     const timer = setTimeout(() => {
         requestPermissionAndSetupNotifications();
     }, 3000);
