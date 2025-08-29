@@ -20,7 +20,7 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <AuthProvider>
@@ -35,7 +35,7 @@ export default function RootLayout({
             </div>
             <Toaster />
             <footer className="w-full p-4 text-center text-sm text-muted-foreground">
-              Made by Kuber and Bhoovan
+              Made by Kuber and Bhoovan. With AI.
             </footer>
           </ThemeProvider>
         </AuthProvider>
