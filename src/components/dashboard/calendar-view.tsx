@@ -114,8 +114,8 @@ export function CalendarView() {
                             <button
                                 onClick={() => handleDayClick(day)}
                                 className={cn(
-                                    "w-10 h-10 flex items-center justify-center rounded-full mx-auto relative transition-all duration-200 ease-in-out",
-                                    "hover:scale-110",
+                                    "w-10 h-10 flex items-center justify-center rounded-full mx-auto relative transition-transform duration-300 ease-out",
+                                    "hover:-translate-y-1 hover:scale-110",
                                     {
                                         "bg-primary text-primary-foreground font-semibold shadow-lg scale-110": isSelected,
                                         "hover:bg-muted": !isSelected,
