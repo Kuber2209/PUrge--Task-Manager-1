@@ -10,6 +10,7 @@ import { AllProfilesDashboard } from '@/components/dashboard/all-profiles-dashbo
 import { MyTasksDashboard } from '@/components/dashboard/my-tasks-dashboard';
 import { Announcements } from '@/components/dashboard/announcements';
 import { OngoingTasksDashboard } from '@/components/dashboard/ongoing-tasks-dashboard';
+import { CalendarView } from '@/components/dashboard/calendar-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getMessaging, getToken } from 'firebase/messaging';
 import { app } from '@/lib/firebase';
@@ -25,39 +26,45 @@ export function Dashboard() {
   useEffect(() => {
     if (!currentUser) return;
     
-    const requestPermission = async () => {
+    const requestPermissionAndSetupNotifications = async () => {
         if (!('Notification' in window)) {
             console.log("This browser does not support desktop notification");
             return;
         }
 
+        // Only ask for permission if it's not already granted or denied
         if (Notification.permission === 'default') {
             console.log('Requesting notification permission...');
             const permission = await Notification.requestPermission();
             if (permission === 'granted') {
-                await setupNotifications();
+                await setupFcmToken();
+            } else {
+                console.log('User denied notification permission.');
             }
         } else if (Notification.permission === 'granted') {
-            await setupNotifications();
-        } else {
-             // User has explicitly denied permission. We won't bug them.
-             // You could store a flag in localStorage to only ask once per session.
-             console.log('Notification permission was previously denied.');
+            // If permission is already granted, just ensure the token is set up
+            await setupFcmToken();
         }
     }
     
-    const setupNotifications = async () => {
+    const setupFcmToken = async () => {
         if (!currentUser) return;
         try {
             const messaging = getMessaging(app);
+            // The VAPID key is a security measure for web push notifications
             const currentToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
+            
             if (currentToken) {
+                // Check if the user's profile already has this token
                 if (!currentUser.notificationTokens?.includes(currentToken)) {
+                    // If not, add it. This is a 'write' operation.
                     await updateUserProfile(currentUser.id, { 
                         notificationTokens: arrayUnion(currentToken) 
                     });
                     toast({title: "Notifications Enabled!", description: "You'll now receive updates on this device."});
                 }
+            } else {
+                console.log('No registration token available. Request permission to generate one.');
             }
         } catch (err) {
             console.error("Error getting notification token", err);
@@ -67,7 +74,7 @@ export function Dashboard() {
 
     // Use a small timeout to let the page settle before asking for permission
     const timer = setTimeout(() => {
-        requestPermission();
+        requestPermissionAndSetupNotifications();
     }, 3000);
 
     return () => clearTimeout(timer);
@@ -83,9 +90,7 @@ export function Dashboard() {
   const isSPT = currentUser.role === 'SPT';
   const isAssociate = currentUser.role === 'Associate';
   
-  // Use a key on the Tabs component to force re-render when user changes, resetting the tab selection.
   const tabsKey = `${currentUser.id}-${currentUser.role}`;
-
   const defaultTab = 'announcements';
 
   return (
@@ -95,6 +100,7 @@ export function Dashboard() {
         <Tabs defaultValue={defaultTab} className="w-full" key={tabsKey}>
            <TabsList className="h-auto flex-wrap justify-start">
             <TabsTrigger value="announcements">Announcements</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
             
             {(isJPT || isSPT) && <TabsTrigger value="posted-tasks">My Posted Tasks</TabsTrigger>}
             
@@ -109,6 +115,10 @@ export function Dashboard() {
 
           <TabsContent value="announcements">
             <Announcements />
+          </TabsContent>
+
+          <TabsContent value="calendar">
+            <CalendarView />
           </TabsContent>
           
           {(isJPT || isSPT) && (
