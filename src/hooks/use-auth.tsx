@@ -88,10 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = () => {
     const provider = new GoogleAuthProvider();
-    // This scope is less sensitive. It allows the app to create its own calendars
-    // and events, but prevents it from reading or editing existing user events.
-    // This often leads to a simpler verification process.
-    provider.addScope('https://www.googleapis.com/auth/calendar');
     return signInWithPopup(auth, provider);
   }
 
