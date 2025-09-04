@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
@@ -203,7 +204,7 @@ function ResourceCard({ resource, users, currentUser, canManage }: { resource: R
 const resourceSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters long.'),
   description: z.string().min(10, 'Description must be at least 10 characters long.'),
-  link: z.string().url().optional().or(z.literal('')),
+  link: z.string().optional(),
   file: z.array(z.instanceof(File)).optional(),
   document: z.custom<Resource['document']>().optional(),
 });
@@ -419,3 +420,4 @@ function ResourceActions({ resource }: { resource: Resource }) {
         </>
     )
 }
+
