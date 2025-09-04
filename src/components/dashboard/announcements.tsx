@@ -462,12 +462,16 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
               </div>
               {errors.content && <p className="text-sm text-destructive">{errors.content.message}</p>}
               {voiceNoteUrl && (
-                    <div className="mt-2 space-y-1">
+                <div className="mt-2 space-y-1 bg-muted/50 p-3 rounded-lg">
+                    <div className='flex justify-between items-center'>
                       <Label className='text-xs'>Content Voice Note</Label>
-                      <audio src={voiceNoteUrl} controls className='w-full h-10' />
-                      <Button variant="link" size="sm" className="p-0 h-auto text-destructive" onClick={() => setValue('voiceNoteUrl', undefined)}>Remove</Button>
+                      <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => setValue('voiceNoteUrl', undefined)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
                     </div>
-                  )}
+                    <audio src={voiceNoteUrl} controls className='w-full h-10' />
+                </div>
+              )}
             </div>
             
             <Separator />
@@ -588,5 +592,3 @@ function AnnouncementActions({ announcement }: { announcement: Announcement }) {
         </>
     )
 }
-
-    

@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Plus, Wand2, Minus, Calendar as CalendarIcon, User, X, Mic, Square, Pause } from 'lucide-react';
+import { Loader2, Plus, Wand2, Minus, Calendar as CalendarIcon, User, X, Mic, Square, Pause, Trash2 } from 'lucide-react';
 import type { Task, AssignableRole, User as UserType, Document } from '@/lib/types';
 import { suggestTaskTags } from '@/ai/flows/suggest-task-tags';
 import { format } from 'date-fns';
@@ -456,10 +456,14 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
                     </div>
                     {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
                     {voiceNoteUrl && (
-                        <div className="mt-2 space-y-1">
+                        <div className="mt-2 space-y-1 bg-muted/50 p-3 rounded-lg">
+                          <div className='flex justify-between items-center'>
                             <Label className='text-xs'>Description Voice Note</Label>
-                            <audio src={voiceNoteUrl} controls className='w-full h-10' />
-                            <Button variant="link" size="sm" className="p-0 h-auto text-destructive" onClick={() => setValue('voiceNoteUrl', undefined)}>Remove</Button>
+                            <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => setValue('voiceNoteUrl', undefined)}>
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                          <audio src={voiceNoteUrl} controls className='w-full h-10' />
                         </div>
                     )}
                 </div>
@@ -649,5 +653,3 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
     </Dialog>
   );
 }
-
-    
