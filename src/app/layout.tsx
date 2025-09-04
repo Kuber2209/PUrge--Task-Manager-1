@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/hooks/use-auth';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'PUrge BPHC',
@@ -35,7 +36,12 @@ export default function RootLayout({
             </div>
             <Toaster />
             <footer className="w-full p-4 text-center text-sm text-muted-foreground">
-              Made by Kuber and Bhoovan. With AI.
+              <div className="flex justify-center items-center gap-4">
+                <span>Made by Kuber and Bhoovan. With AI.</span>
+                <span className="mx-2">|</span>
+                <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
+                <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+              </div>
             </footer>
           </ThemeProvider>
         </AuthProvider>
