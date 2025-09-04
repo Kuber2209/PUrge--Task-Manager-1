@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { Header } from '@/components/dashboard/header';
 import { JptDashboard } from '@/components/dashboard/jpt-dashboard';
@@ -11,6 +12,7 @@ import { MyTasksDashboard } from '@/components/dashboard/my-tasks-dashboard';
 import { Announcements } from '@/components/dashboard/announcements';
 import { OngoingTasksDashboard } from '@/components/dashboard/ongoing-tasks-dashboard';
 import { CalendarView } from '@/components/dashboard/calendar-view';
+import { Resources } from '@/components/dashboard/resources';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getMessaging, getToken } from 'firebase/messaging';
 import { app } from '@/lib/firebase';
@@ -95,10 +97,11 @@ export function Dashboard() {
     <div className="flex min-h-screen w-full flex-col">
       <Header />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <Tabs defaultValue={defaultTab} className="w-full grid-cols-5" key={tabsKey}>
+        <Tabs defaultValue={defaultTab} className="w-full" key={tabsKey}>
            <div className='border-b'>
-            <TabsList className="h-auto flex-wrap justify-start bg-transparent border-none p-0">
+             <TabsList className="h-auto flex-wrap justify-start bg-transparent border-none p-0">
               <TabsTrigger value="announcements">Announcements</TabsTrigger>
+              <TabsTrigger value="resources">Resources</TabsTrigger>
               <TabsTrigger value="calendar">Calendar</TabsTrigger>
               
               {(isJPT || isSPT) && <TabsTrigger value="posted-tasks">My Posted Tasks</TabsTrigger>}
@@ -116,7 +119,9 @@ export function Dashboard() {
           <TabsContent value="announcements">
             <Announcements />
           </TabsContent>
-
+           <TabsContent value="resources">
+            <Resources />
+          </TabsContent>
           <TabsContent value="calendar">
             <CalendarView />
           </TabsContent>

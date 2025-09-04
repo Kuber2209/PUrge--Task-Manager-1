@@ -74,6 +74,7 @@ export interface Announcement {
   documents?: Document[];
   audience?: AnnouncementAudience;
   voiceNoteUrl?: string;
+  isPinned?: boolean;
 }
 
 export interface Task {

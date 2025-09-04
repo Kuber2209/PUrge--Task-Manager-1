@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -6,7 +7,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { User, Announcement, Document, AnnouncementAudience } from '@/lib/types';
-import { formatDistanceToNow, subDays } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -15,12 +16,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Megaphone, Plus, Loader2, MoreVertical, Edit, Trash2, FileText, Download, Upload, Users, UserCheck, ChevronDown, Mic, Square, Pause } from 'lucide-react';
+import { Megaphone, Plus, Loader2, MoreVertical, Edit, Trash2, FileText, Download, Upload, Users, UserCheck, ChevronDown, Mic, Square, Pause, Pin, PinOff } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { createAnnouncement, getAnnouncements, getUsers, updateAnnouncement, deleteAnnouncement } from '@/services/firestore';
 import { uploadFile } from '@/services/storage';
 import { Skeleton } from '../ui/skeleton';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '../ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -35,14 +36,19 @@ export function Announcements() {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
-    const [visibleOlderCount, setVisibleOlderCount] = useState(5);
 
     useEffect(() => {
         setLoading(true);
         if (!currentUser) return;
         
         const unsubscribe = getAnnouncements(currentUser, (data) => {
-            setAnnouncements(data);
+            // Sort to show pinned first, then by date
+            const sortedData = data.sort((a, b) => {
+                if (a.isPinned && !b.isPinned) return -1;
+                if (!a.isPinned && b.isPinned) return 1;
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            });
+            setAnnouncements(sortedData);
             setLoading(false);
         });
         
@@ -51,21 +57,6 @@ export function Announcements() {
         return () => unsubscribe();
     }, [currentUser]);
     
-    const { recentAnnouncements, olderAnnouncements } = useMemo(() => {
-        const twoDaysAgo = subDays(new Date(), 2);
-        const recent: Announcement[] = [];
-        const older: Announcement[] = [];
-
-        announcements.forEach(announcement => {
-            if (new Date(announcement.createdAt) >= twoDaysAgo) {
-                recent.push(announcement);
-            } else {
-                older.push(announcement);
-            }
-        });
-        return { recentAnnouncements: recent, olderAnnouncements: older };
-    }, [announcements]);
-
     if (!currentUser) return null;
 
     const canManage = currentUser.role === 'SPT' || currentUser.role === 'JPT';
@@ -96,42 +87,19 @@ export function Announcements() {
             </div>
 
             <div className='space-y-4'>
-                <h3 className="text-lg font-semibold">Recent</h3>
                 <div className="space-y-6">
-                    {recentAnnouncements.map(announcement => (
+                    {announcements.map(announcement => (
                         <AnnouncementCard key={announcement.id} announcement={announcement} users={users} canManage={canManage} />
                     ))}
-                    {recentAnnouncements.length === 0 && !loading && (
+                    {announcements.length === 0 && !loading && (
                         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed shadow-sm h-40 bg-card">
                             <Megaphone className="w-10 h-10 text-muted-foreground" />
-                            <h3 className="text-xl font-bold tracking-tight font-headline mt-4">No New Announcements</h3>
-                            <p className="text-sm text-muted-foreground">Nothing posted in the last two days.</p>
+                            <h3 className="text-xl font-bold tracking-tight font-headline mt-4">No Announcements Yet</h3>
+                            <p className="text-sm text-muted-foreground">JPTs and SPTs can post announcements here.</p>
                         </div>
                     )}
                 </div>
             </div>
-
-            {olderAnnouncements.length > 0 && (
-                <Collapsible className="mt-8">
-                <CollapsibleTrigger asChild>
-                    <Button variant="outline" className="w-full">
-                        <ChevronDown className="mr-2 h-4 w-4" />
-                        View Older Announcements ({olderAnnouncements.length})
-                    </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-4 space-y-6">
-                    {olderAnnouncements.slice(0, visibleOlderCount).map(announcement => (
-                        <AnnouncementCard key={announcement.id} announcement={announcement} users={users} canManage={canManage} />
-                    ))}
-                    {visibleOlderCount < olderAnnouncements.length && (
-                        <Button variant="secondary" className="w-full" onClick={() => setVisibleOlderCount(prev => prev + 5)}>
-                            Load 5 More
-                        </Button>
-                    )}
-                </CollapsibleContent>
-                </Collapsible>
-            )}
-
         </div>
     );
 }
@@ -140,7 +108,7 @@ function AnnouncementCard({ announcement, users, canManage }: { announcement: An
     const author = users.find(u => u.id === announcement.authorId);
     return (
         <Collapsible key={announcement.id} asChild>
-            <Card className="transition-all hover:shadow-md">
+            <Card className={cn("transition-all hover:shadow-md", announcement.isPinned && "border-primary/50 shadow-lg")}>
                 <CardHeader>
                     <div className="flex items-start justify-between">
                         <div className="flex items-center gap-4">
@@ -150,6 +118,7 @@ function AnnouncementCard({ announcement, users, canManage }: { announcement: An
                             </Avatar>
                             <div>
                                 <CardTitle className="font-headline text-xl flex items-center gap-2">
+                                     {announcement.isPinned && <Pin className="h-5 w-5 text-primary" />}
                                     {announcement.title}
                                     {announcement.audience === 'jpt-only' && (
                                         <Badge variant="secondary" className='flex items-center gap-1'>
@@ -222,6 +191,7 @@ const announcementSchema = z.object({
   documents: z.array(z.custom<Document>()).optional(),
   audience: z.string().optional(),
   voiceNoteUrl: z.string().optional(),
+  isPinned: z.boolean().optional(),
 });
 
 type AnnouncementFormData = z.infer<typeof announcementSchema>;
@@ -248,14 +218,14 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isSubmitting }, reset } = useForm<AnnouncementFormData>({
     resolver: zodResolver(announcementSchema),
-    defaultValues: { title: '', content: '', documents: [], audience: 'all', files: [], voiceNoteUrl: undefined },
+    defaultValues: { title: '', content: '', documents: [], audience: 'all', files: [], voiceNoteUrl: undefined, isPinned: false },
   });
 
   useEffect(() => {
     if (isEdit && announcement) {
-      reset({ title: announcement.title, content: announcement.content, documents: announcement.documents || [], audience: announcement.audience || 'all', files: [], voiceNoteUrl: announcement.voiceNoteUrl });
+      reset({ title: announcement.title, content: announcement.content, documents: announcement.documents || [], audience: announcement.audience || 'all', files: [], voiceNoteUrl: announcement.voiceNoteUrl, isPinned: announcement.isPinned });
     } else {
-      reset({ title: '', content: '', documents: [], audience: 'all', files: [], voiceNoteUrl: undefined });
+      reset({ title: '', content: '', documents: [], audience: 'all', files: [], voiceNoteUrl: undefined, isPinned: false });
     }
   }, [isEdit, announcement, reset]);
 
@@ -357,6 +327,7 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
                 createdAt: new Date().toISOString(),
                 audience: 'all',
                 voiceNoteUrl: finalData.voiceNoteUrl,
+                isPinned: finalData.isPinned || false,
             };
             if(currentUser.role === 'SPT') {
                 newAnnouncementData.audience = data.audience as AnnouncementAudience;
@@ -368,7 +339,7 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
             });
         }
         handleOpenChange(false);
-        reset({ title: '', content: '', documents: [], audience: 'all', files: [], voiceNoteUrl: undefined });
+        reset({ title: '', content: '', documents: [], audience: 'all', files: [], voiceNoteUrl: undefined, isPinned: false });
 
     } catch (err) {
          toast({variant: 'destructive', title: "An Error Occurred", description: "Could not save the announcement."});
@@ -462,7 +433,7 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
               </div>
               {errors.content && <p className="text-sm text-destructive">{errors.content.message}</p>}
               {voiceNoteUrl && (
-                <div className="mt-2 space-y-1 bg-muted/50 p-3 rounded-lg">
+                 <div className="mt-2 space-y-1 bg-muted/50 p-3 rounded-lg">
                     <div className='flex justify-between items-center'>
                       <Label className='text-xs'>Content Voice Note</Label>
                       <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => setValue('voiceNoteUrl', undefined)}>
@@ -548,6 +519,15 @@ function AnnouncementActions({ announcement }: { announcement: Announcement }) {
         }
     }
 
+    const handlePinToggle = async () => {
+        try {
+            await updateAnnouncement(announcement.id, { isPinned: !announcement.isPinned });
+            toast({ title: announcement.isPinned ? "Announcement Unpinned" : "Announcement Pinned" });
+        } catch (err) {
+             toast({ variant: 'destructive', title: "Error", description: "Could not update the announcement." });
+        }
+    }
+
     return (
         <>
             <AlertDialog>
@@ -558,10 +538,15 @@ function AnnouncementActions({ announcement }: { announcement: Announcement }) {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={handlePinToggle}>
+                            {announcement.isPinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
+                            <span>{announcement.isPinned ? "Unpin" : "Pin"}</span>
+                        </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => setEditOpen(true)}>
                             <Edit className="mr-2 h-4 w-4" />
                             <span>Edit</span>
                         </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <AlertDialogTrigger asChild>
                             <DropdownMenuItem className="text-destructive">
                                 <Trash2 className="mr-2 h-4 w-4" />
