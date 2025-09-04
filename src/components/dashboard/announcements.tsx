@@ -31,11 +31,14 @@ import { cn } from '@/lib/utils';
 import { FileUploader } from '../ui/file-uploader';
 
 
+const INITIAL_ANNOUNCEMENTS_COUNT = 3;
+
 export function Announcements() {
     const { user: currentUser } = useAuth();
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const [visibleCount, setVisibleCount] = useState(INITIAL_ANNOUNCEMENTS_COUNT);
 
     useEffect(() => {
         setLoading(true);
@@ -60,6 +63,14 @@ export function Announcements() {
     if (!currentUser) return null;
 
     const canManage = currentUser.role === 'SPT' || currentUser.role === 'JPT';
+    
+    const { pinned, unpinned } = useMemo(() => {
+        const pinned = announcements.filter(a => a.isPinned);
+        const unpinned = announcements.filter(a => !a.isPinned);
+        return { pinned, unpinned };
+    }, [announcements]);
+
+    const visibleUnpinned = unpinned.slice(0, visibleCount);
     
     if (loading) {
         return (
@@ -88,9 +99,10 @@ export function Announcements() {
 
             <div className='space-y-4'>
                 <div className="space-y-6">
-                    {announcements.map(announcement => (
+                    {[...pinned, ...visibleUnpinned].map(announcement => (
                         <AnnouncementCard key={announcement.id} announcement={announcement} users={users} canManage={canManage} />
                     ))}
+                    
                     {announcements.length === 0 && !loading && (
                         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed shadow-sm h-40 bg-card">
                             <Megaphone className="w-10 h-10 text-muted-foreground" />
@@ -99,6 +111,14 @@ export function Announcements() {
                         </div>
                     )}
                 </div>
+
+                {unpinned.length > visibleCount && (
+                    <div className="text-center mt-6">
+                        <Button variant="outline" onClick={() => setVisibleCount(prev => prev + 5)}>
+                            View Older Announcements
+                        </Button>
+                    </div>
+                )}
             </div>
         </div>
     );
