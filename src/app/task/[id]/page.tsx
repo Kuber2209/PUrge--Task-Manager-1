@@ -122,7 +122,8 @@ export default function TaskDetailPage() {
   const isDeadlinePast = task.deadline ? isPast(new Date(task.deadline)) : false;
 
   const handleSendMessage = async (voiceNoteUrl?: string) => {
-    if (newMessage.trim() === '' && !voiceNoteUrl || !task || !currentUser) return;
+    if ((!newMessage || newMessage.trim() === '') && !voiceNoteUrl) return;
+    if (!task || !currentUser) return;
     
     const sender = taskUsers.find(u => u.id === currentUser.id);
     if (!sender) return;
@@ -324,7 +325,8 @@ export default function TaskDetailPage() {
                     <CardFooter className="flex flex-col items-start p-4 border-t">
                        {canChat ? (
                            <MessageInput 
-                            currentUser={currentUser}
+                            newMessage={newMessage}
+                            setNewMessage={setNewMessage}
                             task={task}
                             replyTo={replyTo}
                             onClearReply={() => setReplyTo(null)}
@@ -367,14 +369,14 @@ export default function TaskDetailPage() {
   );
 }
 
-function MessageInput({currentUser, task, replyTo, onClearReply, onSendMessage }: {
-    currentUser: User;
+function MessageInput({newMessage, setNewMessage, task, replyTo, onClearReply, onSendMessage }: {
+    newMessage: string;
+    setNewMessage: (msg: string) => void;
     task: Task;
     replyTo: Message | null;
     onClearReply: () => void;
     onSendMessage: (voiceNoteUrl?: string) => Promise<void>;
 }) {
-    const [newMessage, setNewMessage] = useState('');
     const [isRecording, setIsRecording] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
@@ -447,7 +449,7 @@ function MessageInput({currentUser, task, replyTo, onClearReply, onSendMessage }
                 }}
                 className={cn("flex-1", replyTo ? 'rounded-t-none' : '')}
             />
-            <Button onClick={() => handleSendMessage()} disabled={!newMessage.trim() && !isRecording}>
+            <Button onClick={() => handleSendMessage()} disabled={!newMessage.trim()}>
                 <Send className="h-4 w-4" />
             </Button>
             <Button
