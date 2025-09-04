@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -183,7 +184,7 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
       setIsSuggesting(false);
     }
   };
-
+  
   const handleAddTag = () => {
     const trimmedTag = tagInput.trim();
     if (trimmedTag && !tags.includes(trimmedTag)) {
@@ -346,7 +347,7 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
       Associate: currentUser.role === 'SPT' || currentUser.role === 'JPT',
   }
 
-  const availableUsersForAssignment = allUsers.filter(u => assignableTo.includes(u.role as AssignableRole) && !assignedTo.includes(u.id));
+  const availableUsersForAssignment = allUsers.filter(u => assignableTo.includes(u.role as AssignableRole) && !assignedTo.includes(u.id) && !u.isOnHoliday);
   const selectedUsers = allUsers.filter(u => assignedTo.includes(u.id));
 
   const dialogContent = (

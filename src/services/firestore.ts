@@ -1,7 +1,8 @@
 
 
+
 import { db } from '@/lib/firebase';
-import type { User, Task, Announcement, AnnouncementAudience } from '@/lib/types';
+import type { User, Task, Announcement, AnnouncementAudience, Resource } from '@/lib/types';
 import {
   collection,
   doc,
@@ -272,4 +273,32 @@ export const updateAnnouncement = async (announcementId: string, updates: Partia
 export const deleteAnnouncement = async (announcementId: string): Promise<void> => {
     const announcementRef = doc(db, 'announcements', announcementId);
     await deleteDoc(announcementRef);
+};
+
+
+// == RESOURCE FUNCTIONS ==
+
+export const createResource = async (resourceData: Omit<Resource, 'id'>): Promise<Resource> => {
+    const resourcesCollection = collection(db, 'resources');
+    const docRef = await addDoc(resourcesCollection, resourceData);
+    return { id: docRef.id, ...resourceData };
+};
+
+export const getResources = (callback: (resources: Resource[]) => void): (() => void) => {
+    const resourcesCollection = collection(db, 'resources');
+    const q = query(resourcesCollection, orderBy('createdAt', 'desc'));
+    return onSnapshot(q, (querySnapshot) => {
+        const resources = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource));
+        callback(resources);
+    });
+}
+
+export const updateResource = async (resourceId: string, updates: Partial<Resource>): Promise<void> => {
+    const resourceRef = doc(db, 'resources', resourceId);
+    await updateDoc(resourceRef, updates);
+};
+
+export const deleteResource = async (resourceId: string): Promise<void> => {
+    const resourceRef = doc(db, 'resources', resourceId);
+    await deleteDoc(resourceRef);
 };

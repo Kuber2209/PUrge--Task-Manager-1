@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'SPT' | 'JPT' | 'Associate';
 export type AssignableRole = 'JPT' | 'Associate';
 export type AnnouncementAudience = 'all' | 'jpt-only';
@@ -10,6 +11,7 @@ export interface User {
   avatar: string;
   email: string;
   notificationTokens?: string[]; // For FCM
+  isOnHoliday?: boolean;
 }
 
 export interface VoiceNote {
@@ -39,6 +41,28 @@ export interface Document {
     url: string; // In a real app, this would be a Firebase Storage URL
     uploadedBy: string;
     createdAt: string; // ISO string
+}
+
+export interface ResourceComment {
+    id: string;
+    userId: string;
+    text: string;
+    createdAt: string; // ISO string
+    updatedAt?: string; // ISO string
+}
+
+export interface Resource {
+    id: string;
+    title: string;
+    description: string;
+    link?: string;
+    document?: {
+        name: string;
+        url: string;
+    };
+    createdBy: string; // User ID
+    createdAt: string; // ISO string
+    comments?: ResourceComment[];
 }
 
 export interface Announcement {

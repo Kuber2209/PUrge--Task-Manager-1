@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, {createContext, useContext, useState, useEffect, ReactNode} from 'react';
@@ -10,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
+  setUser: (user: User | null) => void;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   logIn: (email: string, pass: string) => Promise<any>;
@@ -46,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 email: fbUser.email || '',
                 role: 'Associate', 
                 avatar: fbUser.photoURL || `https://i.pravatar.cc/150?u=${fbUser.uid}`,
+                isOnHoliday: false,
             };
             await createUserProfile(newUser);
             setUser(newUser);
@@ -81,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: fbUser.email || '',
         role: 'Associate',
         avatar: `https://i.pravatar.cc/150?u=${fbUser.uid}`,
+        isOnHoliday: false,
     };
     await createUserProfile(newUser);
     setUser(newUser); // Set user immediately after creation
@@ -98,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = {
     user,
+    setUser,
     firebaseUser,
     loading,
     logIn,
