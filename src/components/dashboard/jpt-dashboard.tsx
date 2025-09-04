@@ -51,11 +51,16 @@ export function JptDashboard() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold font-headline tracking-tight">Your Posted Tasks</h2>
+      <div className="flex items-center justify-between border-b border-t py-4">
+        <div>
+            <h2 className="text-2xl font-bold font-headline tracking-tight">Your Posted Tasks</h2>
+            <p className="text-muted-foreground">Manage tasks you have created.</p>
+        </div>
         <CreateTaskForm />
       </div>
-      <TaskList tasks={tasks} users={users} />
+      <div className="mt-6">
+        <TaskList tasks={tasks} users={users} />
+      </div>
     </div>
   );
 }

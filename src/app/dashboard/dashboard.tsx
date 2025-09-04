@@ -94,12 +94,12 @@ export function Dashboard() {
   const defaultTab = 'announcements';
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
+    <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <Tabs defaultValue={defaultTab} className="w-full" key={tabsKey}>
-           <div className='border-b'>
-             <TabsList className="h-auto flex-wrap justify-start bg-transparent border-none p-0">
+      <main className="flex flex-1 flex-col">
+        <Tabs defaultValue={defaultTab} className="w-full flex flex-col" key={tabsKey}>
+           <div className='px-4 md:px-8 bg-header border-b border-border'>
+             <TabsList className="grid w-full max-w-7xl mx-auto h-auto grid-cols-4 md:grid-cols-8">
               <TabsTrigger value="announcements">Announcements</TabsTrigger>
               <TabsTrigger value="resources">Resources</TabsTrigger>
               <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -115,47 +115,50 @@ export function Dashboard() {
               {(isJPT || isSPT) && <TabsTrigger value="team-logs">Team Logs</TabsTrigger>}
             </TabsList>
            </div>
+           
+           <div className="p-4 md:p-8 flex-1">
+             <div className="max-w-7xl mx-auto">
+                <TabsContent value="announcements">
+                  <Announcements />
+                </TabsContent>
+                <TabsContent value="resources">
+                  <Resources />
+                </TabsContent>
+                <TabsContent value="calendar">
+                  <CalendarView />
+                </TabsContent>
+                
+                {(isJPT || isSPT) && (
+                  <TabsContent value="posted-tasks">
+                    <JptDashboard />
+                  </TabsContent>
+                )}
 
-          <TabsContent value="announcements">
-            <Announcements />
-          </TabsContent>
-           <TabsContent value="resources">
-            <Resources />
-          </TabsContent>
-          <TabsContent value="calendar">
-            <CalendarView />
-          </TabsContent>
-          
-          {(isJPT || isSPT) && (
-            <TabsContent value="posted-tasks">
-              <JptDashboard />
-            </TabsContent>
-          )}
+                {(isJPT || isAssociate) && (
+                  <TabsContent value="available-tasks">
+                      <AssociateDashboard />
+                    </TabsContent>
+                )}
 
-          {(isJPT || isAssociate) && (
-             <TabsContent value="available-tasks">
-                <AssociateDashboard />
-              </TabsContent>
-          )}
+                {(isJPT || isAssociate) && (
+                  <TabsContent value="my-tasks">
+                      <MyTasksDashboard />
+                    </TabsContent>
+                )}
 
-          {(isJPT || isAssociate) && (
-             <TabsContent value="my-tasks">
-                <MyTasksDashboard />
-              </TabsContent>
-          )}
+                {(isJPT || isSPT) && (
+                  <TabsContent value="live-tasks">
+                    <OngoingTasksDashboard />
+                  </TabsContent>
+                )}
 
-          {(isJPT || isSPT) && (
-            <TabsContent value="live-tasks">
-              <OngoingTasksDashboard />
-            </TabsContent>
-          )}
-
-          {(isJPT || isSPT) && (
-            <TabsContent value="team-logs">
-              <AllProfilesDashboard currentUser={currentUser} />
-            </TabsContent>
-          )}
-
+                {(isJPT || isSPT) && (
+                  <TabsContent value="team-logs">
+                    <AllProfilesDashboard currentUser={currentUser} />
+                  </TabsContent>
+                )}
+             </div>
+           </div>
         </Tabs>
       </main>
     </div>

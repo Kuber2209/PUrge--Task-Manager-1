@@ -30,34 +30,36 @@ export function Header() {
   };
   
   return (
-    <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 z-10">
-      <Link href="/dashboard" className="flex items-center gap-3">
-        <TieIcon className="h-6 w-6 text-primary" />
-        <h1 className="text-xl font-bold font-headline text-foreground">PUrge BPHC</h1>
-      </Link>
-      <div className="ml-auto flex items-center gap-4">
+    <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-header px-4 md:px-8 z-10">
+      <div className="flex items-center gap-8 max-w-7xl mx-auto w-full">
+        <Link href="/dashboard" className="flex items-center gap-3">
+          <TieIcon className="h-6 w-6 text-primary" />
+          <h1 className="text-xl font-bold font-headline text-foreground hidden sm:block">PUrge BPHC</h1>
+        </Link>
+        <div className="ml-auto flex items-center gap-4">
 
-        {user && (
-          <div className="flex items-center gap-2">
-             <Link href={`/profile/${user.id}`}>
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-            </Link>
-            <div className='hidden sm:flex flex-col text-left'>
-              <span className="text-sm font-medium">{user.name}</span>
-              <span className="text-xs text-muted-foreground">{user.role}</span>
+          {user && (
+            <div className="flex items-center gap-2">
+              <Link href={`/profile/${user.id}`}>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+              </Link>
+              <div className='hidden sm:flex flex-col text-left'>
+                <span className="text-sm font-medium">{user.name}</span>
+                <span className="text-xs text-muted-foreground">{user.role}</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <Button variant="ghost" size="icon" onClick={handleLogout}>
-          <LogOut className="h-5 w-5" />
-          <span className="sr-only">Logout</span>
-        </Button>
+          <Button variant="ghost" size="icon" onClick={handleLogout}>
+            <LogOut className="h-5 w-5" />
+            <span className="sr-only">Logout</span>
+          </Button>
+          <ThemeToggle />
+        </div>
       </div>
-      <ThemeToggle />
     </header>
   );
 }

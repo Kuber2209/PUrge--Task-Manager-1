@@ -68,7 +68,7 @@ export function Resources() {
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-6 border-b pb-4">
+            <div className="flex items-center justify-between border-b border-t py-4">
                 <div>
                     <h2 className="text-2xl font-bold font-headline tracking-tight">Permanent Resources</h2>
                     <p className="text-muted-foreground">Important documents and links for the team.</p>
@@ -76,7 +76,7 @@ export function Resources() {
                 {canManage && <CreateResourceForm />}
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 mt-6">
                 {resources.map(resource => (
                     <ResourceCard key={resource.id} resource={resource} users={users} currentUser={currentUser} canManage={canManage} />
                 ))}
@@ -420,4 +420,3 @@ function ResourceActions({ resource }: { resource: Resource }) {
         </>
     )
 }
-

@@ -89,7 +89,7 @@ export function Announcements() {
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-6 border-b pb-4">
+            <div className="flex items-center justify-between border-b border-t py-4">
                 <div>
                     <h2 className="text-2xl font-bold font-headline tracking-tight">Announcements</h2>
                     <p className="text-muted-foreground">Catch up on the latest updates and news.</p>
@@ -97,7 +97,7 @@ export function Announcements() {
                 {canManage && <CreateAnnouncementForm />}
             </div>
 
-            <div className='space-y-4'>
+            <div className='space-y-4 mt-6'>
                 <div className="space-y-6">
                     {[...pinned, ...visibleUnpinned].map(announcement => (
                         <AnnouncementCard key={announcement.id} announcement={announcement} users={users} canManage={canManage} />
