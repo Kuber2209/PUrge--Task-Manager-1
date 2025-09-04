@@ -95,21 +95,23 @@ export function Dashboard() {
     <div className="flex min-h-screen w-full flex-col">
       <Header />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <Tabs defaultValue={defaultTab} className="w-full" key={tabsKey}>
-           <TabsList className="h-auto flex-wrap justify-start">
-            <TabsTrigger value="announcements">Announcements</TabsTrigger>
-            <TabsTrigger value="calendar">Calendar</TabsTrigger>
-            
-            {(isJPT || isSPT) && <TabsTrigger value="posted-tasks">My Posted Tasks</TabsTrigger>}
-            
-            {(isJPT || isAssociate) && <TabsTrigger value="available-tasks">Available Tasks</TabsTrigger>}
-            
-            {(isJPT || isAssociate) && <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>}
-            
-            {(isJPT || isSPT) && <TabsTrigger value="live-tasks">Live Tasks</TabsTrigger>}
+        <Tabs defaultValue={defaultTab} className="w-full grid-cols-5" key={tabsKey}>
+           <div className='border-b'>
+            <TabsList className="h-auto flex-wrap justify-start bg-transparent border-none p-0">
+              <TabsTrigger value="announcements">Announcements</TabsTrigger>
+              <TabsTrigger value="calendar">Calendar</TabsTrigger>
+              
+              {(isJPT || isSPT) && <TabsTrigger value="posted-tasks">My Posted Tasks</TabsTrigger>}
+              
+              {(isJPT || isAssociate) && <TabsTrigger value="available-tasks">Available Tasks</TabsTrigger>}
+              
+              {(isJPT || isAssociate) && <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>}
+              
+              {(isJPT || isSPT) && <TabsTrigger value="live-tasks">Live Tasks</TabsTrigger>}
 
-            {(isJPT || isSPT) && <TabsTrigger value="team-logs">Team Logs</TabsTrigger>}
-          </TabsList>
+              {(isJPT || isSPT) && <TabsTrigger value="team-logs">Team Logs</TabsTrigger>}
+            </TabsList>
+           </div>
 
           <TabsContent value="announcements">
             <Announcements />
@@ -154,3 +156,5 @@ export function Dashboard() {
     </div>
   );
 }
+
+    

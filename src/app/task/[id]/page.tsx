@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, User as UserIcon, Calendar, Tag, Users, Check, Send, Clock, Upload, Download, Replace, FileText, Globe, MessageSquareQuote, X, Mic, Square } from 'lucide-react';
+import { ArrowLeft, User as UserIcon, Calendar, Tag, Users, Check, Send, Clock, Upload, Download, Replace, FileText, Globe, MessageSquareQuote, X, Mic, Square, Pause } from 'lucide-react';
 import type { Task, User, Message, Document } from '@/lib/types';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
@@ -377,6 +377,8 @@ export default function TaskDetailPage() {
   );
 }
 
+type RecordingStatus = 'idle' | 'recording' | 'paused';
+
 function MessageInput({newMessage, setNewMessage, task, replyTo, onClearReply, onSendMessage }: {
     newMessage: string;
     setNewMessage: (msg: string) => void;
@@ -385,7 +387,7 @@ function MessageInput({newMessage, setNewMessage, task, replyTo, onClearReply, o
     onClearReply: () => void;
     onSendMessage: (voiceNoteUrl?: string) => Promise<void>;
 }) {
-    const [isRecording, setIsRecording] = useState(false);
+    const [recordingStatus, setRecordingStatus] = useState<RecordingStatus>('idle');
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const { toast } = useToast();
@@ -396,6 +398,13 @@ function MessageInput({newMessage, setNewMessage, task, replyTo, onClearReply, o
     }
 
     const startRecording = async () => {
+        if (recordingStatus === 'paused') {
+            mediaRecorderRef.current?.resume();
+            setRecordingStatus('recording');
+            toast({ title: "Recording resumed." });
+            return;
+        }
+
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorderRef.current = new MediaRecorder(stream);
@@ -410,12 +419,15 @@ function MessageInput({newMessage, setNewMessage, task, replyTo, onClearReply, o
                 } catch (error) {
                     console.error("Failed to upload voice note:", error);
                     toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload voice note." });
+                } finally {
+                    audioChunksRef.current = [];
+                    setRecordingStatus('idle');
+                    stream.getTracks().forEach(track => track.stop());
                 }
-                audioChunksRef.current = [];
             };
             audioChunksRef.current = [];
             mediaRecorderRef.current.start();
-            setIsRecording(true);
+            setRecordingStatus('recording');
             toast({ title: "Recording started..." });
         } catch (err) {
             console.error("Error accessing microphone:", err);
@@ -423,11 +435,17 @@ function MessageInput({newMessage, setNewMessage, task, replyTo, onClearReply, o
         }
     };
 
+    const pauseRecording = () => {
+        if (mediaRecorderRef.current?.state === 'recording') {
+            mediaRecorderRef.current.pause();
+            setRecordingStatus('paused');
+            toast({ title: "Recording paused." });
+        }
+    };
+
     const stopRecording = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
-            toast({ title: "Recording stopped. Uploading..." });
+        if (mediaRecorderRef.current?.state !== 'inactive') {
+            mediaRecorderRef.current?.stop();
         }
     };
     
@@ -444,7 +462,7 @@ function MessageInput({newMessage, setNewMessage, task, replyTo, onClearReply, o
             </Button>
         </div>
         )}
-        <div className="w-full flex gap-2">
+        <div className="w-full flex gap-2 items-end">
             <Textarea 
                 placeholder="Type your message here..." 
                 value={newMessage}
@@ -456,17 +474,38 @@ function MessageInput({newMessage, setNewMessage, task, replyTo, onClearReply, o
                     }
                 }}
                 className={cn("flex-1", replyTo ? 'rounded-t-none' : '')}
+                rows={1}
             />
-            <Button onClick={() => handleSendMessage()} disabled={!newMessage.trim()}>
-                <Send className="h-4 w-4" />
-            </Button>
-            <Button
-                variant={isRecording ? "destructive" : "outline"}
-                size="icon"
-                onClick={isRecording ? stopRecording : startRecording}
-            >
-                {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            </Button>
+             <div className="flex gap-2">
+                <Button onClick={() => handleSendMessage()} disabled={!newMessage.trim()}>
+                    <Send className="h-4 w-4" />
+                </Button>
+                {recordingStatus === 'idle' && (
+                    <Button type="button" variant="outline" size="icon" onClick={startRecording}>
+                        <Mic className="h-4 w-4" />
+                    </Button>
+                )}
+                {recordingStatus === 'recording' && (
+                    <>
+                        <Button type="button" variant="secondary" size="icon" onClick={pauseRecording}>
+                            <Pause className="h-4 w-4" />
+                        </Button>
+                        <Button type="button" variant="destructive" size="icon" onClick={stopRecording}>
+                            <Square className="h-4 w-4" />
+                        </Button>
+                    </>
+                )}
+                {recordingStatus === 'paused' && (
+                    <>
+                        <Button type="button" variant="secondary" size="icon" onClick={startRecording}>
+                            <Mic className="h-4 w-4" />
+                        </Button>
+                        <Button type="button" variant="destructive" size="icon" onClick={stopRecording}>
+                            <Square className="h-4 w-4" />
+                        </Button>
+                    </>
+                )}
+            </div>
         </div>
       </>
     )
@@ -696,5 +735,7 @@ function TransferTaskCard({ task, currentUser, onTaskUpdate }: { task: Task; cur
         </Card>
     );
 }
+
+    
 
     

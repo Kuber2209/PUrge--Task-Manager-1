@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Plus, Wand2, Minus, Calendar as CalendarIcon, User, X, Mic, Square } from 'lucide-react';
+import { Loader2, Plus, Wand2, Minus, Calendar as CalendarIcon, User, X, Mic, Square, Pause } from 'lucide-react';
 import type { Task, AssignableRole, User as UserType, Document } from '@/lib/types';
 import { suggestTaskTags } from '@/ai/flows/suggest-task-tags';
 import { format } from 'date-fns';
@@ -70,6 +70,9 @@ interface CreateTaskFormProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+type RecordingStatus = 'idle' | 'recording' | 'paused';
+
+
 export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTaskFormProps) {
   const { user: currentUser } = useAuth();
   const [open, setOpen] = useState(false);
@@ -79,7 +82,7 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
   const [allUsers, setAllUsers] = useState<UserType[]>([]);
   const { toast } = useToast();
 
-  const [isRecording, setIsRecording] = useState(false);
+  const [recordingStatus, setRecordingStatus] = useState<RecordingStatus>('idle');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
@@ -193,7 +196,13 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
     setValue('tags', tags.filter(tag => tag !== tagToRemove));
   };
 
-  const startRecording = async () => {
+    const startRecording = async () => {
+        if (recordingStatus === 'paused') {
+            mediaRecorderRef.current?.resume();
+            setRecordingStatus('recording');
+            toast({ title: "Recording resumed." });
+            return;
+        }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorderRef.current = new MediaRecorder(stream);
@@ -210,12 +219,15 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
                 } catch (error) {
                     console.error("Failed to upload voice note:", error);
                     toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload voice note." });
+                } finally {
+                    audioChunksRef.current = [];
+                    setRecordingStatus('idle');
+                    stream.getTracks().forEach(track => track.stop());
                 }
-                audioChunksRef.current = [];
             };
             audioChunksRef.current = [];
             mediaRecorderRef.current.start();
-            setIsRecording(true);
+            setRecordingStatus('recording');
             toast({ title: "Recording started..." });
         } catch (err) {
             console.error("Error accessing microphone:", err);
@@ -223,11 +235,17 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
         }
     };
 
+    const pauseRecording = () => {
+        if (mediaRecorderRef.current?.state === 'recording') {
+          mediaRecorderRef.current.pause();
+          setRecordingStatus('paused');
+          toast({ title: "Recording paused." });
+        }
+    };
+
     const stopRecording = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
-            toast({ title: "Recording stopped. Uploading..." });
+        if (mediaRecorderRef.current?.state !== 'inactive') {
+            mediaRecorderRef.current?.stop();
         }
     };
   
@@ -405,27 +423,45 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
                   {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description (Optional)</Label>
-                  <div className="flex gap-2">
-                    <Textarea id="description" {...register('description')} className="min-h-[120px] flex-1" />
-                     <Button
-                        type="button"
-                        variant={isRecording ? "destructive" : "outline"}
-                        size="icon"
-                        onClick={isRecording ? stopRecording : startRecording}
-                        disabled={isSubmitting || isUploading}
-                      >
-                        {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                      </Button>
-                  </div>
-                  {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
-                   {voiceNoteUrl && (
-                    <div className="mt-2 space-y-1">
-                      <Label className='text-xs'>Description Voice Note</Label>
-                      <audio src={voiceNoteUrl} controls className='w-full h-10' />
-                      <Button variant="link" size="sm" className="p-0 h-auto text-destructive" onClick={() => setValue('voiceNoteUrl', undefined)}>Remove</Button>
+                    <Label htmlFor="description">Description (Optional)</Label>
+                    <div className="flex items-start gap-2">
+                        <Textarea id="description" {...register('description')} className="min-h-[120px] flex-1" />
+                        <div className='flex flex-col gap-2'>
+                            {recordingStatus === 'idle' && (
+                                <Button type="button" variant="outline" size="icon" onClick={startRecording} disabled={isSubmitting || isUploading}>
+                                    <Mic className="h-4 w-4" />
+                                </Button>
+                            )}
+                            {recordingStatus === 'recording' && (
+                                <>
+                                    <Button type="button" variant="secondary" size="icon" onClick={pauseRecording}>
+                                        <Pause className="h-4 w-4" />
+                                    </Button>
+                                    <Button type="button" variant="destructive" size="icon" onClick={stopRecording}>
+                                        <Square className="h-4 w-4" />
+                                    </Button>
+                                </>
+                            )}
+                            {recordingStatus === 'paused' && (
+                                <>
+                                    <Button type="button" variant="secondary" size="icon" onClick={startRecording}>
+                                        <Mic className="h-4 w-4" />
+                                    </Button>
+                                    <Button type="button" variant="destructive" size="icon" onClick={stopRecording}>
+                                        <Square className="h-4 w-4" />
+                                    </Button>
+                                </>
+                            )}
+                        </div>
                     </div>
-                  )}
+                    {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+                    {voiceNoteUrl && (
+                        <div className="mt-2 space-y-1">
+                            <Label className='text-xs'>Description Voice Note</Label>
+                            <audio src={voiceNoteUrl} controls className='w-full h-10' />
+                            <Button variant="link" size="sm" className="p-0 h-auto text-destructive" onClick={() => setValue('voiceNoteUrl', undefined)}>Remove</Button>
+                        </div>
+                    )}
                 </div>
 
                  <div className="space-y-2">
@@ -586,7 +622,7 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
           </ScrollArea>
         </div>
         <DialogFooter>
-          <Button type="submit" form="create-task-form" disabled={isSubmitting || isUploading || isRecording}>
+          <Button type="submit" form="create-task-form" disabled={isSubmitting || isUploading || recordingStatus !== 'idle'}>
             {(isSubmitting || isUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isUploading ? 'Uploading...' : isEdit ? 'Save Changes' : 'Create Task'}
           </Button>
@@ -613,3 +649,5 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
     </Dialog>
   );
 }
+
+    

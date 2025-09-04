@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Megaphone, Plus, Loader2, MoreVertical, Edit, Trash2, FileText, Download, Upload, Users, UserCheck, ChevronDown, Mic, Square } from 'lucide-react';
+import { Megaphone, Plus, Loader2, MoreVertical, Edit, Trash2, FileText, Download, Upload, Users, UserCheck, ChevronDown, Mic, Square, Pause } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { createAnnouncement, getAnnouncements, getUsers, updateAnnouncement, deleteAnnouncement } from '@/services/firestore';
 import { uploadFile } from '@/services/storage';
@@ -66,7 +66,6 @@ export function Announcements() {
         return { recentAnnouncements: recent, olderAnnouncements: older };
     }, [announcements]);
 
-
     if (!currentUser) return null;
 
     const canManage = currentUser.role === 'SPT' || currentUser.role === 'JPT';
@@ -88,45 +87,49 @@ export function Announcements() {
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 border-b pb-4">
                 <div>
-                    <h2 className="text-2xl font-bold font-headline tracking-tight">Recent Announcements</h2>
+                    <h2 className="text-2xl font-bold font-headline tracking-tight">Announcements</h2>
                     <p className="text-muted-foreground">Catch up on the latest updates and news.</p>
                 </div>
                 {canManage && <CreateAnnouncementForm />}
             </div>
-            <div className="space-y-6">
-                {recentAnnouncements.map(announcement => (
-                    <AnnouncementCard key={announcement.id} announcement={announcement} users={users} canManage={canManage} />
-                ))}
-                 {recentAnnouncements.length === 0 && !loading && (
-                     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed shadow-sm h-40 bg-card">
-                        <Megaphone className="w-10 h-10 text-muted-foreground" />
-                        <h3 className="text-xl font-bold tracking-tight font-headline mt-4">No New Announcements</h3>
-                        <p className="text-sm text-muted-foreground">Nothing posted in the last two days.</p>
-                    </div>
-                )}
+
+            <div className='space-y-4'>
+                <h3 className="text-lg font-semibold">Recent</h3>
+                <div className="space-y-6">
+                    {recentAnnouncements.map(announcement => (
+                        <AnnouncementCard key={announcement.id} announcement={announcement} users={users} canManage={canManage} />
+                    ))}
+                    {recentAnnouncements.length === 0 && !loading && (
+                        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed shadow-sm h-40 bg-card">
+                            <Megaphone className="w-10 h-10 text-muted-foreground" />
+                            <h3 className="text-xl font-bold tracking-tight font-headline mt-4">No New Announcements</h3>
+                            <p className="text-sm text-muted-foreground">Nothing posted in the last two days.</p>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {olderAnnouncements.length > 0 && (
-                 <Collapsible className="mt-8">
-                    <CollapsibleTrigger asChild>
-                        <Button variant="outline" className="w-full">
-                            <ChevronDown className="mr-2 h-4 w-4" />
-                            View Older Announcements ({olderAnnouncements.length})
+                <Collapsible className="mt-8">
+                <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                        <ChevronDown className="mr-2 h-4 w-4" />
+                        View Older Announcements ({olderAnnouncements.length})
+                    </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-4 space-y-6">
+                    {olderAnnouncements.slice(0, visibleOlderCount).map(announcement => (
+                        <AnnouncementCard key={announcement.id} announcement={announcement} users={users} canManage={canManage} />
+                    ))}
+                    {visibleOlderCount < olderAnnouncements.length && (
+                        <Button variant="secondary" className="w-full" onClick={() => setVisibleOlderCount(prev => prev + 5)}>
+                            Load 5 More
                         </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-4 space-y-6">
-                        {olderAnnouncements.slice(0, visibleOlderCount).map(announcement => (
-                           <AnnouncementCard key={announcement.id} announcement={announcement} users={users} canManage={canManage} />
-                        ))}
-                        {visibleOlderCount < olderAnnouncements.length && (
-                            <Button variant="secondary" className="w-full" onClick={() => setVisibleOlderCount(prev => prev + 5)}>
-                                Load 5 More
-                            </Button>
-                        )}
-                    </CollapsibleContent>
-                 </Collapsible>
+                    )}
+                </CollapsibleContent>
+                </Collapsible>
             )}
 
         </div>
@@ -223,12 +226,15 @@ const announcementSchema = z.object({
 
 type AnnouncementFormData = z.infer<typeof announcementSchema>;
 
+type RecordingStatus = 'idle' | 'recording' | 'paused';
+
+
 function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange }: { isEdit?: boolean; announcement?: Announcement, onFormOpenChange?: (open: boolean) => void }) {
   const { user: currentUser } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
-  const [isRecording, setIsRecording] = useState(false);
+  const [recordingStatus, setRecordingStatus] = useState<RecordingStatus>('idle');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   
@@ -256,43 +262,59 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
   const files = watch('files') || [];
   const voiceNoteUrl = watch('voiceNoteUrl');
 
-   const startRecording = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorderRef.current = new MediaRecorder(stream);
-            mediaRecorderRef.current.ondataavailable = (event) => {
-                audioChunksRef.current.push(event.data);
-            };
-            mediaRecorderRef.current.onstop = async () => {
-                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                try {
-                    const tempId = announcement?.id || `temp_${Date.now()}`;
-                    const downloadURL = await uploadFile(new File([audioBlob], "announcement-content.webm"), `announcements/${tempId}/voice-notes`);
-                    setValue('voiceNoteUrl', downloadURL);
-                    toast({ title: "Voice note added!" });
-                } catch (error) {
-                    console.error("Failed to upload voice note:", error);
-                    toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload voice note." });
-                }
-                audioChunksRef.current = [];
-            };
-            audioChunksRef.current = [];
-            mediaRecorderRef.current.start();
-            setIsRecording(true);
-            toast({ title: "Recording started..." });
-        } catch (err) {
-            console.error("Error accessing microphone:", err);
-            toast({ variant: "destructive", title: "Microphone Access Denied", description: "Please enable microphone permissions in your browser." });
-        }
-    };
+  const startRecording = async () => {
+    if (recordingStatus === 'paused') {
+        mediaRecorderRef.current?.resume();
+        setRecordingStatus('recording');
+        toast({ title: "Recording resumed." });
+        return;
+    }
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
-            toast({ title: "Recording stopped. Uploading..." });
-        }
-    };
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorderRef.current = new MediaRecorder(stream);
+        mediaRecorderRef.current.ondataavailable = (event) => {
+            audioChunksRef.current.push(event.data);
+        };
+        mediaRecorderRef.current.onstop = async () => {
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            try {
+                const tempId = announcement?.id || `temp_${Date.now()}`;
+                const downloadURL = await uploadFile(new File([audioBlob], "announcement-content.webm"), `announcements/${tempId}/voice-notes`);
+                setValue('voiceNoteUrl', downloadURL);
+                toast({ title: "Voice note added!" });
+            } catch (error) {
+                console.error("Failed to upload voice note:", error);
+                toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload voice note." });
+            } finally {
+                audioChunksRef.current = [];
+                setRecordingStatus('idle');
+                stream.getTracks().forEach(track => track.stop());
+            }
+        };
+        audioChunksRef.current = [];
+        mediaRecorderRef.current.start();
+        setRecordingStatus('recording');
+        toast({ title: "Recording started..." });
+    } catch (err) {
+        console.error("Error accessing microphone:", err);
+        toast({ variant: "destructive", title: "Microphone Access Denied", description: "Please enable microphone permissions in your browser." });
+    }
+  };
+
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.pause();
+      setRecordingStatus('paused');
+      toast({ title: "Recording paused." });
+    }
+  };
+
+  const stopRecording = () => {
+      if (mediaRecorderRef.current?.state !== 'inactive') {
+          mediaRecorderRef.current?.stop();
+      }
+  };
 
   const onSubmit = async (data: AnnouncementFormData) => {
     if (!currentUser) return;
@@ -408,17 +430,35 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
             </div>
             <div className="space-y-2">
               <Label htmlFor="content">Content</Label>
-              <div className="flex gap-2">
-                <Textarea id="content" {...register('content')} className="min-h-[150px] flex-1" />
-                <Button
-                    type="button"
-                    variant={isRecording ? "destructive" : "outline"}
-                    size="icon"
-                    onClick={isRecording ? stopRecording : startRecording}
-                    disabled={isSubmitting || uploading}
-                >
-                    {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                </Button>
+              <div className="flex items-start gap-2">
+                  <Textarea id="content" {...register('content')} className="min-h-[150px] flex-1" />
+                  <div className='flex flex-col gap-2'>
+                      {recordingStatus === 'idle' && (
+                          <Button type="button" variant="outline" size="icon" onClick={startRecording} disabled={isSubmitting || uploading}>
+                              <Mic className="h-4 w-4" />
+                          </Button>
+                      )}
+                      {recordingStatus === 'recording' && (
+                          <>
+                              <Button type="button" variant="secondary" size="icon" onClick={pauseRecording}>
+                                  <Pause className="h-4 w-4" />
+                              </Button>
+                              <Button type="button" variant="destructive" size="icon" onClick={stopRecording}>
+                                  <Square className="h-4 w-4" />
+                              </Button>
+                          </>
+                      )}
+                      {recordingStatus === 'paused' && (
+                          <>
+                              <Button type="button" variant="secondary" size="icon" onClick={startRecording}>
+                                  <Mic className="h-4 w-4" />
+                              </Button>
+                              <Button type="button" variant="destructive" size="icon" onClick={stopRecording}>
+                                  <Square className="h-4 w-4" />
+                              </Button>
+                          </>
+                      )}
+                  </div>
               </div>
               {errors.content && <p className="text-sm text-destructive">{errors.content.message}</p>}
               {voiceNoteUrl && (
@@ -479,7 +519,7 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
 
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting || uploading || isRecording}>
+            <Button type="submit" form="create-task-form" disabled={isSubmitting || uploading || recordingStatus !== 'idle'}>
               {(isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEdit ? 'Save Changes' : 'Post Announcement'}
             </Button>
@@ -548,3 +588,5 @@ function AnnouncementActions({ announcement }: { announcement: Announcement }) {
         </>
     )
 }
+
+    
