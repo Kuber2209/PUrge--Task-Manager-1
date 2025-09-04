@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Plus, Wand2, Minus, Calendar as CalendarIcon, User, X } from 'lucide-react';
+import { Loader2, Plus, Wand2, Minus, Calendar as CalendarIcon, User, X, Mic, Square } from 'lucide-react';
 import type { Task, AssignableRole, User as UserType, Document } from '@/lib/types';
 import { suggestTaskTags } from '@/ai/flows/suggest-task-tags';
 import { format } from 'date-fns';
@@ -43,6 +43,7 @@ const taskSchema = z.object({
   isAnonymous: z.boolean().optional(),
   files: z.array(z.instanceof(File)).optional(),
   documents: z.array(z.custom<Document>()).optional(),
+  voiceNoteUrl: z.string().optional(),
 }).refine(data => {
     if (data.assignableTo.includes('JPT') && (data.requiredJpts === undefined || data.requiredJpts < 1)) {
         return false;
@@ -78,6 +79,10 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
   const [allUsers, setAllUsers] = useState<UserType[]>([]);
   const { toast } = useToast();
 
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
   useEffect(() => {
     getUsers().then(setAllUsers);
   }, [])
@@ -105,6 +110,7 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
             isAnonymous: task.isAnonymous || false,
             documents: task.documents || [],
             files: [],
+            voiceNoteUrl: task.voiceNoteUrl,
         };
     }
     return {
@@ -120,6 +126,7 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
       isAnonymous: false,
       documents: [],
       files: [],
+      voiceNoteUrl: undefined,
     };
   };
 
@@ -140,6 +147,8 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
   const requiredAssociates = watch('requiredAssociates');
   const deadline = watch('deadline');
   const assignedTo = watch('assignedTo') || [];
+  const voiceNoteUrl = watch('voiceNoteUrl');
+
 
   useEffect(() => {
     if (!assignableTo.includes('JPT')) setValue('requiredJpts', 0);
@@ -183,6 +192,44 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
   const handleRemoveTag = (tagToRemove: string) => {
     setValue('tags', tags.filter(tag => tag !== tagToRemove));
   };
+
+  const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorderRef.current = new MediaRecorder(stream);
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                audioChunksRef.current.push(event.data);
+            };
+            mediaRecorderRef.current.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                try {
+                    const tempId = task?.id || `temp_${Date.now()}`;
+                    const downloadURL = await uploadFile(new File([audioBlob], "task-description.webm"), `tasks/${tempId}/voice-notes`);
+                    setValue('voiceNoteUrl', downloadURL);
+                    toast({ title: "Voice note added!" });
+                } catch (error) {
+                    console.error("Failed to upload voice note:", error);
+                    toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload voice note." });
+                }
+                audioChunksRef.current = [];
+            };
+            audioChunksRef.current = [];
+            mediaRecorderRef.current.start();
+            setIsRecording(true);
+            toast({ title: "Recording started..." });
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            toast({ variant: "destructive", title: "Microphone Access Denied", description: "Please enable microphone permissions in your browser." });
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            toast({ title: "Recording stopped. Uploading..." });
+        }
+    };
   
   const onSubmit = async (data: TaskFormData) => {
     if (!currentUser) return;
@@ -193,7 +240,8 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
       let uploadedDocuments: Document[] = data.documents || [];
 
       if (data.files && data.files.length > 0) {
-          const uploadPromises = data.files.map(file => uploadFile(file, `tasks/${task?.id || 'temp'}/documents`));
+          const tempId = task?.id || `temp_${Date.now()}`;
+          const uploadPromises = data.files.map(file => uploadFile(file, `tasks/${tempId}/documents`));
           const downloadURLs = await Promise.all(uploadPromises);
           
           const newDocuments: Document[] = data.files.map((file, index) => ({
@@ -245,6 +293,7 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
             documents: uploadedDocuments,
             deadline: deadlineISO,
             isAnonymous: data.isAnonymous || false,
+            voiceNoteUrl: data.voiceNoteUrl,
           };
           
           if (data.assignableTo.includes('JPT')) {
@@ -357,8 +406,26 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description (Optional)</Label>
-                  <Textarea id="description" {...register('description')} className="min-h-[120px]" />
+                  <div className="flex gap-2">
+                    <Textarea id="description" {...register('description')} className="min-h-[120px] flex-1" />
+                     <Button
+                        type="button"
+                        variant={isRecording ? "destructive" : "outline"}
+                        size="icon"
+                        onClick={isRecording ? stopRecording : startRecording}
+                        disabled={isSubmitting || isUploading}
+                      >
+                        {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                      </Button>
+                  </div>
                   {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+                   {voiceNoteUrl && (
+                    <div className="mt-2 space-y-1">
+                      <Label className='text-xs'>Description Voice Note</Label>
+                      <audio src={voiceNoteUrl} controls className='w-full h-10' />
+                      <Button variant="link" size="sm" className="p-0 h-auto text-destructive" onClick={() => setValue('voiceNoteUrl', undefined)}>Remove</Button>
+                    </div>
+                  )}
                 </div>
 
                  <div className="space-y-2">
@@ -519,7 +586,7 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
           </ScrollArea>
         </div>
         <DialogFooter>
-          <Button type="submit" form="create-task-form" disabled={isSubmitting || isUploading}>
+          <Button type="submit" form="create-task-form" disabled={isSubmitting || isUploading || isRecording}>
             {(isSubmitting || isUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isUploading ? 'Uploading...' : isEdit ? 'Save Changes' : 'Create Task'}
           </Button>
@@ -546,5 +613,3 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
     </Dialog>
   );
 }
-
-    

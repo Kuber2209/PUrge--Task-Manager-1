@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Megaphone, Plus, Loader2, MoreVertical, Edit, Trash2, FileText, Download, Upload, Users, UserCheck, ChevronDown } from 'lucide-react';
+import { Megaphone, Plus, Loader2, MoreVertical, Edit, Trash2, FileText, Download, Upload, Users, UserCheck, ChevronDown, Mic, Square } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { createAnnouncement, getAnnouncements, getUsers, updateAnnouncement, deleteAnnouncement } from '@/services/firestore';
 import { uploadFile } from '@/services/storage';
@@ -170,6 +170,12 @@ function AnnouncementCard({ announcement, users, canManage }: { announcement: An
                 <CollapsibleContent>
                     <CardContent>
                         <p className="whitespace-pre-wrap">{announcement.content}</p>
+                         {announcement.voiceNoteUrl && (
+                            <div className="mt-4 space-y-1">
+                                <p className="text-sm font-medium text-muted-foreground">Content Voice Note</p>
+                                <audio src={announcement.voiceNoteUrl} controls className="w-full h-10" />
+                            </div>
+                        )}
                     </CardContent>
                     {(announcement.documents && announcement.documents.length > 0) && (
                         <CardFooter className="flex-col items-start gap-2 pt-4 border-t">
@@ -209,6 +215,7 @@ const announcementSchema = z.object({
   files: z.array(z.instanceof(File)).optional(),
   documents: z.array(z.custom<Document>()).optional(),
   audience: z.string().optional(),
+  voiceNoteUrl: z.string().optional(),
 });
 
 type AnnouncementFormData = z.infer<typeof announcementSchema>;
@@ -218,6 +225,9 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   
   const handleOpenChange = (open: boolean) => {
     if (onFormOpenChange) {
@@ -229,18 +239,57 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isSubmitting }, reset } = useForm<AnnouncementFormData>({
     resolver: zodResolver(announcementSchema),
-    defaultValues: { title: '', content: '', documents: [], audience: 'all', files: [] },
+    defaultValues: { title: '', content: '', documents: [], audience: 'all', files: [], voiceNoteUrl: undefined },
   });
 
   useEffect(() => {
     if (isEdit && announcement) {
-      reset({ title: announcement.title, content: announcement.content, documents: announcement.documents || [], audience: announcement.audience || 'all', files: [] });
+      reset({ title: announcement.title, content: announcement.content, documents: announcement.documents || [], audience: announcement.audience || 'all', files: [], voiceNoteUrl: announcement.voiceNoteUrl });
     } else {
-      reset({ title: '', content: '', documents: [], audience: 'all', files: [] });
+      reset({ title: '', content: '', documents: [], audience: 'all', files: [], voiceNoteUrl: undefined });
     }
   }, [isEdit, announcement, reset]);
 
   const files = watch('files') || [];
+  const voiceNoteUrl = watch('voiceNoteUrl');
+
+   const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorderRef.current = new MediaRecorder(stream);
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                audioChunksRef.current.push(event.data);
+            };
+            mediaRecorderRef.current.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                try {
+                    const tempId = announcement?.id || `temp_${Date.now()}`;
+                    const downloadURL = await uploadFile(new File([audioBlob], "announcement-content.webm"), `announcements/${tempId}/voice-notes`);
+                    setValue('voiceNoteUrl', downloadURL);
+                    toast({ title: "Voice note added!" });
+                } catch (error) {
+                    console.error("Failed to upload voice note:", error);
+                    toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload voice note." });
+                }
+                audioChunksRef.current = [];
+            };
+            audioChunksRef.current = [];
+            mediaRecorderRef.current.start();
+            setIsRecording(true);
+            toast({ title: "Recording started..." });
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            toast({ variant: "destructive", title: "Microphone Access Denied", description: "Please enable microphone permissions in your browser." });
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            toast({ title: "Recording stopped. Uploading..." });
+        }
+    };
 
   const onSubmit = async (data: AnnouncementFormData) => {
     if (!currentUser) return;
@@ -250,7 +299,8 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
         let uploadedDocuments: Document[] = data.documents || [];
 
         if (data.files && data.files.length > 0) {
-            const uploadPromises = data.files.map(file => uploadFile(file, 'announcement-documents'));
+            const tempId = announcement?.id || `temp_${Date.now()}`;
+            const uploadPromises = data.files.map(file => uploadFile(file, `announcements/${tempId}/documents`));
             const downloadURLs = await Promise.all(uploadPromises);
             
             const newDocuments: Document[] = data.files.map((file, index) => ({
@@ -281,6 +331,7 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
                 authorId: currentUser.id,
                 createdAt: new Date().toISOString(),
                 audience: 'all',
+                voiceNoteUrl: finalData.voiceNoteUrl,
             };
             if(currentUser.role === 'SPT') {
                 newAnnouncementData.audience = data.audience as AnnouncementAudience;
@@ -292,7 +343,7 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
             });
         }
         handleOpenChange(false);
-        reset({ title: '', content: '', documents: [], audience: 'all', files: [] });
+        reset({ title: '', content: '', documents: [], audience: 'all', files: [], voiceNoteUrl: undefined });
 
     } catch (err) {
          toast({variant: 'destructive', title: "An Error Occurred", description: "Could not save the announcement."});
@@ -354,8 +405,26 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
             </div>
             <div className="space-y-2">
               <Label htmlFor="content">Content</Label>
-              <Textarea id="content" {...register('content')} className="min-h-[150px]" />
+              <div className="flex gap-2">
+                <Textarea id="content" {...register('content')} className="min-h-[150px] flex-1" />
+                <Button
+                    type="button"
+                    variant={isRecording ? "destructive" : "outline"}
+                    size="icon"
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={isSubmitting || uploading}
+                >
+                    {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+              </div>
               {errors.content && <p className="text-sm text-destructive">{errors.content.message}</p>}
+              {voiceNoteUrl && (
+                    <div className="mt-2 space-y-1">
+                      <Label className='text-xs'>Content Voice Note</Label>
+                      <audio src={voiceNoteUrl} controls className='w-full h-10' />
+                      <Button variant="link" size="sm" className="p-0 h-auto text-destructive" onClick={() => setValue('voiceNoteUrl', undefined)}>Remove</Button>
+                    </div>
+                  )}
             </div>
             
             <Separator />
@@ -407,7 +476,7 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
 
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting || uploading}>
+            <Button type="submit" disabled={isSubmitting || uploading || isRecording}>
               {(isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEdit ? 'Save Changes' : 'Post Announcement'}
             </Button>

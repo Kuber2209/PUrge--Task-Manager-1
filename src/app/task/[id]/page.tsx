@@ -191,7 +191,13 @@ export default function TaskDetailPage() {
                 <CardTitle className="font-headline text-2xl mb-2">{task.title}</CardTitle>
                 <Badge variant="outline" className={`whitespace-nowrap ${statusStyles[task.status]}`}>{task.status}</Badge>
               </div>
-              <CardDescription className="text-base">{task.description}</CardDescription>
+              <CardDescription className="text-base whitespace-pre-wrap">{task.description}</CardDescription>
+               {task.voiceNoteUrl && (
+                <div className="mt-4 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Description Voice Note</p>
+                    <audio src={task.voiceNoteUrl} controls className="w-full h-10" />
+                </div>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">

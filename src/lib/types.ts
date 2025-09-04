@@ -49,6 +49,7 @@ export interface Announcement {
   createdAt: string; // ISO string
   documents?: Document[];
   audience?: AnnouncementAudience;
+  voiceNoteUrl?: string;
 }
 
 export interface Task {
@@ -68,4 +69,5 @@ export interface Task {
   messages?: Message[];
   documents?: Document[];
   isAnonymous?: boolean;
+  voiceNoteUrl?: string;
 }
