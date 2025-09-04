@@ -11,27 +11,27 @@
     --card-foreground: 224 71.4% 4.1%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 71.4% 4.1%;
-    --primary: 262 82% 57%;
+    --primary: 262 82% 62%;
     --primary-foreground: 0 0% 100%;
     --secondary: 220 14.3% 95.9%;
     --secondary-foreground: 220.9 39.3% 11%;
     --muted: 220 14.3% 95.9%;
     --muted-foreground: 220 8.9% 46.1%;
-    --accent: 262 82% 57%;
+    --accent: 262 82% 62%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 220 13% 91% / 0.8;
     --input: 220 13% 91%;
-    --ring: 262 82% 57%;
+    --ring: 262 82% 62%;
     --radius: 0.8rem;
   }
   .dark {
-    --background: 222 47% 11%;
+    --background: 224 71.4% 4.1%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 14% / 0.5;
+    --card: 222 47% 8% / 0.5;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
+    --popover: 222 47% 6%;
     --popover-foreground: 210 40% 98%;
     --primary: 262 82% 67%;
     --primary-foreground: 222 47% 11%;
@@ -43,7 +43,7 @@
     --accent-foreground: 222 47% 11%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 25% / 0.8;
+    --border: 217 33% 17%;
     --input: 217 33% 17%;
     --ring: 262 82% 67%;
   }
@@ -62,7 +62,7 @@
       inset: 0;
       z-index: -1;
       background: radial-gradient(ellipse at 20% 20%, hsl(210 90% 90% / 0.15), transparent 50%),
-                  radial-gradient(ellipse at 80% 30%, hsl(262 90% 92% / 0.15), transparent 60%),
+                  radial-gradient(ellipse at 80% 30%, hsl(var(--primary) / 0.15), transparent 60%),
                   radial-gradient(ellipse at 50% 90%, hsl(220 90% 92% / 0.1), transparent 60%);
       filter: blur(90px);
   }
@@ -125,4 +125,3 @@
     @apply absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-destructive;
   }
 }
-

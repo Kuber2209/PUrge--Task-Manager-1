@@ -285,19 +285,22 @@ export default function TaskDetailPage() {
                                     const sender = taskUsers.find(u => u.id === message.userId);
                                     const isCurrentUserMsg = sender?.id === currentUser.id;
                                     return (
-                                        <div key={message.id} className={`flex items-start gap-3 group ${isCurrentUserMsg ? 'justify-end' : ''}`}>
+                                        <div key={message.id} className={`flex items-end gap-3 group ${isCurrentUserMsg ? 'justify-end' : ''}`}>
                                              {!isCurrentUserMsg && sender && (
                                                 <Avatar className="h-8 w-8">
                                                     <AvatarImage src={sender?.avatar} />
                                                     <AvatarFallback>{sender?.name.slice(0,2).toUpperCase()}</AvatarFallback>
                                                 </Avatar>
                                             )}
-                                            <div className={cn('p-3 rounded-lg max-w-sm relative', isCurrentUserMsg ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
-                                                <p className="text-sm font-bold">{sender?.name}</p>
+                                            <div className={cn(
+                                                'p-3 rounded-lg max-w-md relative flex flex-col', 
+                                                isCurrentUserMsg ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'
+                                                )}>
+                                                 {!isCurrentUserMsg && <p className="text-xs font-bold mb-1 text-primary">{sender?.name}</p>}
                                                 {message.replyTo && (
-                                                    <div className="border-l-2 border-primary-foreground/50 pl-2 mb-1 text-xs opacity-80">
+                                                    <div className="border-l-2 border-primary-foreground/30 dark:border-primary/50 pl-2 mb-2 text-xs opacity-80 bg-black/10 dark:bg-white/10 p-2 rounded-md">
                                                         <p className="font-semibold">{message.replyTo.userName}</p>
-                                                        <p className="truncate">{message.replyTo.text}</p>
+                                                        <p className="truncate italic">"{message.replyTo.text}"</p>
                                                     </div>
                                                 )}
                                                 {message.text && <p className="text-sm whitespace-pre-wrap">{message.text}</p>}
@@ -306,7 +309,7 @@ export default function TaskDetailPage() {
                                                     <audio src={message.voiceNote.url} controls className='w-full h-10' />
                                                   </div>
                                                 )}
-                                                <p className="text-xs opacity-70 mt-1 text-right">{formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}</p>
+                                                <p className="text-xs opacity-70 mt-1.5 self-end">{formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}</p>
                                                  {canChat && (
                                                     <Button 
                                                         variant="ghost" 
@@ -454,7 +457,7 @@ function MessageInput({newMessage, setNewMessage, task, replyTo, onClearReply, o
         {replyTo && (
         <div className="w-full bg-muted p-2 rounded-t-md flex justify-between items-center text-sm">
             <div className="truncate">
-                Replying to <span className="font-semibold">{/* Find user name */}</span>: 
+                Replying to <span className="font-semibold">{replyTo.userName}</span>: 
                 <span className="text-muted-foreground ml-1 italic">"{replyTo.text}"</span>
             </div>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClearReply}>
