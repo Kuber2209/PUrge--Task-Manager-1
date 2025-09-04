@@ -69,14 +69,14 @@ export function Announcements() {
 
     if (!currentUser) return null;
 
-    const canCreate = currentUser.role === 'SPT' || currentUser.role === 'JPT';
+    const canManage = currentUser.role === 'SPT' || currentUser.role === 'JPT';
     
     if (loading) {
         return (
             <div>
                  <div className="flex items-center justify-between mb-4">
                     <Skeleton className="h-8 w-64" />
-                    {canCreate && <Skeleton className="h-10 w-44" />}
+                    {canManage && <Skeleton className="h-10 w-44" />}
                 </div>
                 <div className="space-y-6">
                     <Skeleton className="h-48 w-full" />
@@ -93,7 +93,7 @@ export function Announcements() {
                     <h2 className="text-2xl font-bold font-headline tracking-tight">Recent Announcements</h2>
                     <p className="text-muted-foreground">Catch up on the latest updates and news.</p>
                 </div>
-                {canCreate && <CreateAnnouncementForm />}
+                {canManage && <CreateAnnouncementForm />}
             </div>
             <div className="space-y-6">
                 {recentAnnouncements.map(announcement => (
@@ -118,7 +118,7 @@ export function Announcements() {
                     </CollapsibleTrigger>
                     <CollapsibleContent className="mt-4 space-y-6">
                         {olderAnnouncements.slice(0, visibleOlderCount).map(announcement => (
-                           <AnnouncementCard key={announcement.id} announcement={announcement} users={users} canManage={canCreate} />
+                           <AnnouncementCard key={announcement.id} announcement={announcement} users={users} canManage={canManage} />
                         ))}
                         {visibleOlderCount < olderAnnouncements.length && (
                             <Button variant="secondary" className="w-full" onClick={() => setVisibleOlderCount(prev => prev + 5)}>
