@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Megaphone, Plus, Loader2, MoreVertical, Edit, Trash2, FileText, Download, Upload, Users, UserCheck, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { createAnnouncement, getAnnouncements, getUsers, updateAnnouncement, deleteAnnouncement } from '@/services/firestore';
+import { uploadFile } from '@/services/storage';
 import { Skeleton } from '../ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
@@ -187,7 +188,7 @@ function AnnouncementCard({ announcement, users, canManage }: { announcement: An
                                         </div>
                                         </div>
                                         <Button variant="ghost" size="sm" asChild>
-                                        <a href={doc.url} download={doc.name}><Download className="w-4 h-4"/></a>
+                                          <a href={doc.url} download={doc.name} target="_blank" rel="noopener noreferrer"><Download className="w-4 h-4"/></a>
                                         </Button>
                                     </li>
                                 )
@@ -213,7 +214,8 @@ type AnnouncementFormData = z.infer<typeof announcementSchema>;
 function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange }: { isEdit?: boolean; announcement?: Announcement, onFormOpenChange?: (open: boolean) => void }) {
   const { user: currentUser } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [docName, setDocName] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
   
   const handleOpenChange = (open: boolean) => {
@@ -239,17 +241,25 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
 
   const documents = watch('documents') || [];
   
-  const handleAddDocument = () => {
-    if (!docName.trim() || !currentUser) return;
-    const newDocument: Document = {
-      id: `doc_${Date.now()}`,
-      name: docName,
-      url: '#', // Placeholder URL
-      uploadedBy: currentUser.id,
-      createdAt: new Date().toISOString(),
-    };
-    setValue('documents', [...documents, newDocument]);
-    setDocName('');
+  const handleAddDocument = async () => {
+    if (!selectedFile || !currentUser) return;
+    setUploading(true);
+    try {
+        const downloadURL = await uploadFile(selectedFile, 'announcement-documents');
+        const newDocument: Document = {
+            id: `doc_${Date.now()}`,
+            name: selectedFile.name,
+            url: downloadURL,
+            uploadedBy: currentUser.id,
+            createdAt: new Date().toISOString(),
+        };
+        setValue('documents', [...documents, newDocument]);
+        setSelectedFile(null);
+    } catch (err) {
+        toast({variant: 'destructive', title: "Upload Failed"});
+    } finally {
+        setUploading(false);
+    }
   };
 
   const handleRemoveDocument = (docId: string) => {
@@ -352,9 +362,10 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
             <div className="space-y-2">
                 <Label>Documents (Optional)</Label>
                 <div className="flex gap-2">
-                    <Input value={docName} onChange={(e) => setDocName(e.target.value)} placeholder="e.g., 'Meeting Agenda.pdf'" />
-                    <Button type="button" variant="outline" onClick={handleAddDocument} disabled={!docName.trim()}>
-                        <Upload className="mr-2 h-4 w-4" /> Add
+                    <Input type="file" onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)} />
+                    <Button type="button" variant="outline" onClick={handleAddDocument} disabled={!selectedFile || uploading}>
+                        {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Upload className="mr-2 h-4 w-4" />} 
+                        Add
                     </Button>
                 </div>
                  {(documents.length > 0) && (
@@ -378,7 +389,7 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
 
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || uploading}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEdit ? 'Save Changes' : 'Post Announcement'}
             </Button>
@@ -447,7 +458,3 @@ function AnnouncementActions({ announcement }: { announcement: Announcement }) {
         </>
     )
 }
-
-    
-
-    

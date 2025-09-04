@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, User as UserIcon, Calendar, Tag, Users, Check, Send, Clock, Upload, Download, Replace, FileText, Globe, MessageSquareQuote, X } from 'lucide-react';
+import { ArrowLeft, User as UserIcon, Calendar, Tag, Users, Check, Send, Clock, Upload, Download, Replace, FileText, Globe, MessageSquareQuote, X, Mic, Square } from 'lucide-react';
 import type { Task, User, Message, Document } from '@/lib/types';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { getTask, getTaskUsers, updateTask, getUsers } from '@/services/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { uploadFile } from '@/services/storage';
 
 
 const statusStyles: { [key: string]: string } = {
@@ -120,8 +121,8 @@ export default function TaskDetailPage() {
 
   const isDeadlinePast = task.deadline ? isPast(new Date(task.deadline)) : false;
 
-  const handleSendMessage = async () => {
-    if (newMessage.trim() === '' || !task || !currentUser) return;
+  const handleSendMessage = async (voiceNoteUrl?: string) => {
+    if (newMessage.trim() === '' && !voiceNoteUrl || !task || !currentUser) return;
     
     const sender = taskUsers.find(u => u.id === currentUser.id);
     if (!sender) return;
@@ -132,6 +133,15 @@ export default function TaskDetailPage() {
       text: newMessage,
       createdAt: new Date().toISOString(),
     };
+    
+    if (voiceNoteUrl) {
+      message.voiceNote = {
+        id: `vn_${Date.now()}`,
+        url: voiceNoteUrl,
+        createdAt: new Date().toISOString(),
+        createdBy: currentUser.id,
+      }
+    }
 
     if (replyTo) {
       const replyToUser = taskUsers.find(u => u.id === replyTo.userId);
@@ -281,7 +291,12 @@ export default function TaskDetailPage() {
                                                         <p className="truncate">{message.replyTo.text}</p>
                                                     </div>
                                                 )}
-                                                <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                                                {message.text && <p className="text-sm whitespace-pre-wrap">{message.text}</p>}
+                                                {message.voiceNote && (
+                                                  <div className='mt-2'>
+                                                    <audio src={message.voiceNote.url} controls className='w-full h-10' />
+                                                  </div>
+                                                )}
                                                 <p className="text-xs opacity-70 mt-1 text-right">{formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}</p>
                                                  {canChat && (
                                                     <Button 
@@ -308,36 +323,13 @@ export default function TaskDetailPage() {
                     </CardContent>
                     <CardFooter className="flex flex-col items-start p-4 border-t">
                        {canChat ? (
-                        <>
-                         {replyTo && (
-                            <div className="w-full bg-muted p-2 rounded-t-md flex justify-between items-center text-sm">
-                                <div className="truncate">
-                                    Replying to <span className="font-semibold">{taskUsers.find(u => u.id === replyTo.userId)?.name}</span>: 
-                                    <span className="text-muted-foreground ml-1 italic">"{replyTo.text}"</span>
-                                </div>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setReplyTo(null)}>
-                                    <X className="h-4 w-4" />
-                                </Button>
-                            </div>
-                         )}
-                        <div className="w-full flex gap-2">
-                             <Textarea 
-                                placeholder="Type your message here..." 
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                        e.preventDefault();
-                                        handleSendMessage();
-                                    }
-                                }}
-                                className={cn("flex-1", replyTo ? 'rounded-t-none' : '')}
-                            />
-                            <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                                <Send className="h-4 w-4" />
-                            </Button>
-                        </div>
-                        </>
+                           <MessageInput 
+                            currentUser={currentUser}
+                            task={task}
+                            replyTo={replyTo}
+                            onClearReply={() => setReplyTo(null)}
+                            onSendMessage={handleSendMessage}
+                           />
                        ) : (
                            <p className="text-center text-muted-foreground w-full">This task is complete. The chat is now read-only.</p>
                        )}
@@ -375,9 +367,106 @@ export default function TaskDetailPage() {
   );
 }
 
+function MessageInput({currentUser, task, replyTo, onClearReply, onSendMessage }: {
+    currentUser: User;
+    task: Task;
+    replyTo: Message | null;
+    onClearReply: () => void;
+    onSendMessage: (voiceNoteUrl?: string) => Promise<void>;
+}) {
+    const [newMessage, setNewMessage] = useState('');
+    const [isRecording, setIsRecording] = useState(false);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const { toast } = useToast();
+
+    const handleSendMessage = async (voiceNoteUrl?: string) => {
+        await onSendMessage(voiceNoteUrl);
+        setNewMessage('');
+    }
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorderRef.current = new MediaRecorder(stream);
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                audioChunksRef.current.push(event.data);
+            };
+            mediaRecorderRef.current.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                try {
+                    const downloadURL = await uploadFile(new File([audioBlob], "voice-note.webm"), `tasks/${task.id}/voice-notes`);
+                    await handleSendMessage(downloadURL);
+                } catch (error) {
+                    console.error("Failed to upload voice note:", error);
+                    toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload voice note." });
+                }
+                audioChunksRef.current = [];
+            };
+            audioChunksRef.current = [];
+            mediaRecorderRef.current.start();
+            setIsRecording(true);
+            toast({ title: "Recording started..." });
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            toast({ variant: "destructive", title: "Microphone Access Denied", description: "Please enable microphone permissions in your browser." });
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            toast({ title: "Recording stopped. Uploading..." });
+        }
+    };
+    
+    return (
+      <>
+        {replyTo && (
+        <div className="w-full bg-muted p-2 rounded-t-md flex justify-between items-center text-sm">
+            <div className="truncate">
+                Replying to <span className="font-semibold">{/* Find user name */}</span>: 
+                <span className="text-muted-foreground ml-1 italic">"{replyTo.text}"</span>
+            </div>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClearReply}>
+                <X className="h-4 w-4" />
+            </Button>
+        </div>
+        )}
+        <div className="w-full flex gap-2">
+            <Textarea 
+                placeholder="Type your message here..." 
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                    }
+                }}
+                className={cn("flex-1", replyTo ? 'rounded-t-none' : '')}
+            />
+            <Button onClick={() => handleSendMessage()} disabled={!newMessage.trim() && !isRecording}>
+                <Send className="h-4 w-4" />
+            </Button>
+            <Button
+                variant={isRecording ? "destructive" : "outline"}
+                size="icon"
+                onClick={isRecording ? stopRecording : startRecording}
+            >
+                {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+        </div>
+      </>
+    )
+}
+
+
 function DocumentCard({ task, currentUser, onTaskUpdate }: { task: Task; currentUser: User; onTaskUpdate: (update: Partial<Task>) => Promise<void> }) {
     const [open, setOpen] = useState(false);
-    const [docName, setDocName] = useState('');
+    const [uploading, setUploading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const { toast } = useToast();
 
@@ -386,25 +475,34 @@ function DocumentCard({ task, currentUser, onTaskUpdate }: { task: Task; current
     }, [])
 
     const handleUpload = async () => {
-        if (!docName.trim()) {
-            toast({ variant: "destructive", title: "Document name cannot be empty." });
+        if (!selectedFile) {
+            toast({ variant: "destructive", title: "No file selected." });
             return;
         }
 
-        const newDocument: Document = {
-            id: `doc_${Date.now()}`,
-            name: docName,
-            url: '#', // In a real app, this would be a Firebase Storage URL
-            uploadedBy: currentUser.id,
-            createdAt: new Date().toISOString(),
-        };
+        setUploading(true);
+        try {
+            const downloadURL = await uploadFile(selectedFile, `tasks/${task.id}/documents`);
+            const newDocument: Document = {
+                id: `doc_${Date.now()}`,
+                name: selectedFile.name,
+                url: downloadURL,
+                uploadedBy: currentUser.id,
+                createdAt: new Date().toISOString(),
+            };
 
-        const updatedDocuments = [...(task.documents || []), newDocument];
-        await onTaskUpdate({ documents: updatedDocuments });
-        
-        toast({ title: "Document uploaded!" });
-        setDocName('');
-        setOpen(false);
+            const updatedDocuments = [...(task.documents || []), newDocument];
+            await onTaskUpdate({ documents: updatedDocuments });
+            
+            toast({ title: "Document uploaded!" });
+            setSelectedFile(null);
+            setOpen(false);
+        } catch (error) {
+            console.error("Failed to upload document:", error);
+            toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload the document." });
+        } finally {
+            setUploading(false);
+        }
     }
     
     return (
@@ -422,14 +520,17 @@ function DocumentCard({ task, currentUser, onTaskUpdate }: { task: Task; current
                                 <DialogDescription>This will be shared with everyone on this task.</DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4 py-4">
-                                <Label htmlFor="doc-name">Document Name</Label>
-                                <Input id="doc-name" value={docName} onChange={(e) => setDocName(e.target.value)} placeholder="e.g., 'Final Report.pdf'" />
-                                <div className='text-sm text-muted-foreground'>
-                                    Note: In a real app, you would upload a file here.
-                                </div>
+                                <Label htmlFor="doc-file">Select file</Label>
+                                <Input 
+                                  id="doc-file" 
+                                  type="file" 
+                                  onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)}
+                                />
                             </div>
                             <DialogFooter>
-                                <Button onClick={handleUpload}>Upload Document</Button>
+                                <Button onClick={handleUpload} disabled={!selectedFile || uploading}>
+                                  {uploading ? 'Uploading...' : 'Upload Document'}
+                                </Button>
                             </DialogFooter>
                         </DialogContent>
                      </Dialog>
@@ -452,7 +553,7 @@ function DocumentCard({ task, currentUser, onTaskUpdate }: { task: Task; current
                                   </div>
                                 </div>
                                 <Button variant="ghost" size="sm" asChild>
-                                  <a href={doc.url} download={doc.name}><Download className="w-4 h-4"/></a>
+                                  <a href={doc.url} download={doc.name} target="_blank" rel="noopener noreferrer"><Download className="w-4 h-4"/></a>
                                 </Button>
                              </li>
                            )

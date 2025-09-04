@@ -12,11 +12,20 @@ export interface User {
   notificationTokens?: string[]; // For FCM
 }
 
+export interface VoiceNote {
+  id: string;
+  url: string; // URL to the audio file in Firebase Storage
+  transcript?: string; // Optional transcript
+  createdAt: string; // ISO string
+  createdBy: string; // User ID
+}
+
 export interface Message {
   id:string;
   userId: string;
   text: string;
   createdAt: string; // ISO string
+  voiceNote?: VoiceNote;
   replyTo?: {
     messageId: string;
     text: string;
