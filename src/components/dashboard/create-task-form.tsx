@@ -6,7 +6,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Plus, Wand2, Minus, Calendar as CalendarIcon, User, X } from 'lucide-react';
-import type { Task, AssignableRole, User as UserType } from '@/lib/types';
+import type { Task, AssignableRole, User as UserType, Document } from '@/lib/types';
 import { suggestTaskTags } from '@/ai/flows/suggest-task-tags';
 import { format } from 'date-fns';
 
@@ -26,6 +26,8 @@ import { createTask, updateTask, getUsers } from '@/services/firestore';
 import { ScrollArea } from '../ui/scroll-area';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { FileUploader } from '../ui/file-uploader';
+import { uploadFile } from '@/services/storage';
 
 
 const taskSchema = z.object({
@@ -39,6 +41,8 @@ const taskSchema = z.object({
   requiredAssociates: z.number().min(0).optional(),
   assignedTo: z.array(z.string()).optional(), // For direct assignment
   isAnonymous: z.boolean().optional(),
+  files: z.array(z.instanceof(File)).optional(),
+  documents: z.array(z.custom<Document>()).optional(),
 }).refine(data => {
     if (data.assignableTo.includes('JPT') && (data.requiredJpts === undefined || data.requiredJpts < 1)) {
         return false;
@@ -69,6 +73,7 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
   const { user: currentUser } = useAuth();
   const [open, setOpen] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [allUsers, setAllUsers] = useState<UserType[]>([]);
   const { toast } = useToast();
@@ -98,6 +103,8 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
             deadlineTime: deadlineTimeValue,
             assignedTo: task.assignedTo || [],
             isAnonymous: task.isAnonymous || false,
+            documents: task.documents || [],
+            files: [],
         };
     }
     return {
@@ -111,6 +118,8 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
       deadlineTime: undefined,
       assignedTo: [],
       isAnonymous: false,
+      documents: [],
+      files: [],
     };
   };
 
@@ -178,63 +187,89 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
   const onSubmit = async (data: TaskFormData) => {
     if (!currentUser) return;
 
-    let deadlineISO: string | undefined = undefined;
-    if (data.deadline) {
-        const date = new Date(data.deadline);
-        if (data.deadlineTime) {
-            const [hours, minutes] = data.deadlineTime.split(':');
-            date.setHours(parseInt(hours, 10));
-            date.setMinutes(parseInt(minutes, 10));
-        } else {
-            date.setHours(23, 59, 59, 999);
-        }
-        deadlineISO = date.toISOString();
-    }
-    
-    if (isEdit && task) {
-        const updatedTaskData: Partial<Task> = {
-            ...data,
-            deadline: deadlineISO,
-            assignableTo: data.assignableTo as AssignableRole[],
-            assignedTo: data.assignedTo || [],
-        };
-        await updateTask(task.id, updatedTaskData);
-        toast({ title: 'Task Updated!' });
-    } else {
-        const newTaskData: Omit<Task, 'id'> = {
-          title: data.title,
-          description: data.description || '',
-          tags: data.tags || [],
-          status: 'Open',
-          createdBy: currentUser.id,
-          assignedTo: data.assignedTo || [],
-          assignableTo: data.assignableTo as AssignableRole[],
-          createdAt: new Date().toISOString(),
-          messages: [],
-          documents: [],
-          deadline: deadlineISO,
-          isAnonymous: data.isAnonymous || false,
-        };
-        
-        if (data.assignableTo.includes('JPT')) {
-            newTaskData.requiredJpts = data.requiredJpts;
-        }
-        
-        if (data.assignableTo.includes('Associate')) {
-            newTaskData.requiredAssociates = data.requiredAssociates;
-        }
-        
-        const newTask = await createTask(newTaskData);
+    setIsUploading(true);
 
-        toast({
-          title: 'Task Created!',
-          description: `The task "${data.title}" has been posted.`,
-        });
+    try {
+      let uploadedDocuments: Document[] = data.documents || [];
+
+      if (data.files && data.files.length > 0) {
+          const uploadPromises = data.files.map(file => uploadFile(file, `tasks/${task?.id || 'temp'}/documents`));
+          const downloadURLs = await Promise.all(uploadPromises);
+          
+          const newDocuments: Document[] = data.files.map((file, index) => ({
+              id: `doc_${Date.now()}_${index}`,
+              name: file.name,
+              url: downloadURLs[index],
+              uploadedBy: currentUser.id,
+              createdAt: new Date().toISOString(),
+          }));
+          uploadedDocuments = [...uploadedDocuments, ...newDocuments];
+      }
+      
+      let deadlineISO: string | undefined = undefined;
+      if (data.deadline) {
+          const date = new Date(data.deadline);
+          if (data.deadlineTime) {
+              const [hours, minutes] = data.deadlineTime.split(':');
+              date.setHours(parseInt(hours, 10));
+              date.setMinutes(parseInt(minutes, 10));
+          } else {
+              date.setHours(23, 59, 59, 999);
+          }
+          deadlineISO = date.toISOString();
+      }
+      
+      const finalData = { ...data, documents: uploadedDocuments };
+
+      if (isEdit && task) {
+          const updatedTaskData: Partial<Task> = {
+              ...finalData,
+              deadline: deadlineISO,
+              assignableTo: data.assignableTo as AssignableRole[],
+              assignedTo: data.assignedTo || [],
+          };
+          delete (updatedTaskData as any).files;
+          await updateTask(task.id, updatedTaskData);
+          toast({ title: 'Task Updated!' });
+      } else {
+          const newTaskData: Omit<Task, 'id'> = {
+            title: data.title,
+            description: data.description || '',
+            tags: data.tags || [],
+            status: 'Open',
+            createdBy: currentUser.id,
+            assignedTo: data.assignedTo || [],
+            assignableTo: data.assignableTo as AssignableRole[],
+            createdAt: new Date().toISOString(),
+            messages: [],
+            documents: uploadedDocuments,
+            deadline: deadlineISO,
+            isAnonymous: data.isAnonymous || false,
+          };
+          
+          if (data.assignableTo.includes('JPT')) {
+              newTaskData.requiredJpts = data.requiredJpts;
+          }
+          
+          if (data.assignableTo.includes('Associate')) {
+              newTaskData.requiredAssociates = data.requiredAssociates;
+          }
+          
+          const newTask = await createTask(newTaskData);
+
+          toast({
+            title: 'Task Created!',
+            description: `The task "${data.title}" has been posted.`,
+          });
+      }
+    } catch (err) {
+      toast({variant: 'destructive', title: "An Error Occurred", description: "Could not save the task."});
+    } finally {
+        setIsUploading(false);
+        const currentSetOpen = onOpenChange || setOpen;
+        currentSetOpen(false);
         reset(getInitialValues());
     }
-
-    const currentSetOpen = onOpenChange || setOpen;
-    currentSetOpen(false);
   };
   
   if (!currentUser) return null;
@@ -418,6 +453,30 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
                         />
                     </div>
                 </div>
+
+                <div className="space-y-2">
+                    <Label>Attach Documents (Optional)</Label>
+                     <Controller
+                        control={control}
+                        name="files"
+                        render={({ field }) => (
+                            <FileUploader
+                                value={field.value ?? []}
+                                onValueChange={field.onChange}
+                                dropzoneOptions={{
+                                    accept: {
+                                        'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
+                                        'application/pdf': ['.pdf'],
+                                        'application/msword': ['.doc'],
+                                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+                                    },
+                                    maxSize: 10 * 1024 * 1024, // 10MB
+                                }}
+                            />
+                        )}
+                    />
+                </div>
+
                 <div className="space-y-2">
                     <Label>Tags (Optional)</Label>
                     <div className="flex gap-2">
@@ -460,9 +519,9 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
           </ScrollArea>
         </div>
         <DialogFooter>
-          <Button type="submit" form="create-task-form" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEdit ? 'Save Changes' : 'Create Task'}
+          <Button type="submit" form="create-task-form" disabled={isSubmitting || isUploading}>
+            {(isSubmitting || isUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isUploading ? 'Uploading...' : isEdit ? 'Save Changes' : 'Create Task'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -487,3 +546,5 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
     </Dialog>
   );
 }
+
+    
