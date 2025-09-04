@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { cn } from '@/lib/utils';
+import { FileUploader } from '../ui/file-uploader';
 
 
 export function Announcements() {
@@ -205,6 +206,7 @@ function AnnouncementCard({ announcement, users, canManage }: { announcement: An
 const announcementSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters long.'),
   content: z.string().min(10, 'Content must be at least 10 characters long.'),
+  files: z.array(z.instanceof(File)).optional(),
   documents: z.array(z.custom<Document>()).optional(),
   audience: z.string().optional(),
 });
@@ -215,7 +217,6 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
   const { user: currentUser } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
   
   const handleOpenChange = (open: boolean) => {
@@ -228,76 +229,76 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isSubmitting }, reset } = useForm<AnnouncementFormData>({
     resolver: zodResolver(announcementSchema),
-    defaultValues: { title: '', content: '', documents: [], audience: 'all' },
+    defaultValues: { title: '', content: '', documents: [], audience: 'all', files: [] },
   });
 
   useEffect(() => {
     if (isEdit && announcement) {
-      reset({ title: announcement.title, content: announcement.content, documents: announcement.documents || [], audience: announcement.audience || 'all' });
+      reset({ title: announcement.title, content: announcement.content, documents: announcement.documents || [], audience: announcement.audience || 'all', files: [] });
     } else {
-      reset({ title: '', content: '', documents: [], audience: 'all' });
+      reset({ title: '', content: '', documents: [], audience: 'all', files: [] });
     }
   }, [isEdit, announcement, reset]);
 
-  const documents = watch('documents') || [];
-  
-  const handleAddDocument = async () => {
-    if (!selectedFile || !currentUser) return;
-    setUploading(true);
-    try {
-        const downloadURL = await uploadFile(selectedFile, 'announcement-documents');
-        const newDocument: Document = {
-            id: `doc_${Date.now()}`,
-            name: selectedFile.name,
-            url: downloadURL,
-            uploadedBy: currentUser.id,
-            createdAt: new Date().toISOString(),
-        };
-        setValue('documents', [...documents, newDocument]);
-        setSelectedFile(null);
-    } catch (err) {
-        toast({variant: 'destructive', title: "Upload Failed"});
-    } finally {
-        setUploading(false);
-    }
-  };
-
-  const handleRemoveDocument = (docId: string) => {
-    setValue('documents', documents.filter(doc => doc.id !== docId));
-  }
+  const files = watch('files') || [];
 
   const onSubmit = async (data: AnnouncementFormData) => {
     if (!currentUser) return;
+    setUploading(true);
 
-    if(isEdit && announcement) {
-        const updateData: Partial<Announcement> = { ...data };
-        if(currentUser.role === 'SPT') {
-            updateData.audience = data.audience as AnnouncementAudience;
+    try {
+        let uploadedDocuments: Document[] = data.documents || [];
+
+        if (data.files && data.files.length > 0) {
+            const uploadPromises = data.files.map(file => uploadFile(file, 'announcement-documents'));
+            const downloadURLs = await Promise.all(uploadPromises);
+            
+            const newDocuments: Document[] = data.files.map((file, index) => ({
+                id: `doc_${Date.now()}_${index}`,
+                name: file.name,
+                url: downloadURLs[index],
+                uploadedBy: currentUser.id,
+                createdAt: new Date().toISOString(),
+            }));
+            uploadedDocuments = [...uploadedDocuments, ...newDocuments];
         }
-        await updateAnnouncement(announcement.id, updateData);
-        toast({ title: 'Announcement Updated!' });
-    } else {
-        const newAnnouncementData: Omit<Announcement, 'id'> = {
-            title: data.title,
-            content: data.content,
-            documents: data.documents,
-            authorId: currentUser.id,
-            createdAt: new Date().toISOString(),
-        };
-        if(currentUser.role === 'SPT') {
-            newAnnouncementData.audience = data.audience as AnnouncementAudience;
+
+        const finalData = { ...data, documents: uploadedDocuments };
+        delete (finalData as any).files;
+
+        if(isEdit && announcement) {
+            const updateData: Partial<Announcement> = { ...finalData };
+            if(currentUser.role === 'SPT') {
+                updateData.audience = data.audience as AnnouncementAudience;
+            }
+            await updateAnnouncement(announcement.id, updateData);
+            toast({ title: 'Announcement Updated!' });
         } else {
-            newAnnouncementData.audience = 'all'; // JPTs can only post to all
+            const newAnnouncementData: Omit<Announcement, 'id'> = {
+                title: finalData.title,
+                content: finalData.content,
+                documents: finalData.documents,
+                authorId: currentUser.id,
+                createdAt: new Date().toISOString(),
+                audience: 'all',
+            };
+            if(currentUser.role === 'SPT') {
+                newAnnouncementData.audience = data.audience as AnnouncementAudience;
+            }
+            await createAnnouncement(newAnnouncementData);
+            toast({
+                title: 'Announcement Posted!',
+                description: `Your announcement "${data.title}" is now live.`,
+            });
         }
+        handleOpenChange(false);
+        reset({ title: '', content: '', documents: [], audience: 'all', files: [] });
 
-        await createAnnouncement(newAnnouncementData);
-        toast({
-            title: 'Announcement Posted!',
-            description: `Your announcement "${data.title}" is now live.`,
-        });
+    } catch (err) {
+         toast({variant: 'destructive', title: "An Error Occurred", description: "Could not save the announcement."});
+    } finally {
+        setUploading(false);
     }
-    handleOpenChange(false);
-    reset({ title: '', content: '', documents: [], audience: 'all' });
   };
   
   return (
@@ -361,23 +362,40 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
 
             <div className="space-y-2">
                 <Label>Documents (Optional)</Label>
-                <div className="flex gap-2">
-                    <Input type="file" onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)} />
-                    <Button type="button" variant="outline" onClick={handleAddDocument} disabled={!selectedFile || uploading}>
-                        {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Upload className="mr-2 h-4 w-4" />} 
-                        Add
-                    </Button>
-                </div>
-                 {(documents.length > 0) && (
+                <Controller
+                    control={control}
+                    name="files"
+                    render={({ field }) => (
+                        <FileUploader
+                            value={field.value ?? []}
+                            onValueChange={field.onChange}
+                            dropzoneOptions={{
+                                accept: {
+                                    'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
+                                    'application/pdf': ['.pdf'],
+                                    'application/msword': ['.doc'],
+                                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+                                },
+                                maxSize: 10 * 1024 * 1024, // 10MB
+                            }}
+                        />
+                    )}
+                />
+
+                 {isEdit && (announcement?.documents || []).length > 0 && (
                     <div className="space-y-2 rounded-md border p-2">
+                         <h4 className="font-medium text-sm text-muted-foreground">Previously Uploaded:</h4>
                          <ul className="space-y-2">
-                            {documents.map(doc => (
+                            {(announcement?.documents || []).map(doc => (
                                 <li key={doc.id} className="flex items-center justify-between text-sm p-1">
                                     <div className="flex items-center gap-2">
                                         <FileText className="w-4 h-4 text-muted-foreground" />
                                         <span className="font-medium">{doc.name}</span>
                                     </div>
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveDocument(doc.id)}>
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => {
+                                        const currentDocs = watch('documents') || [];
+                                        setValue('documents', currentDocs.filter(d => d.id !== doc.id));
+                                    }}>
                                         <Trash2 className="w-4 h-4 text-destructive"/>
                                     </Button>
                                 </li>
@@ -390,7 +408,7 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting || uploading}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {(isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEdit ? 'Save Changes' : 'Post Announcement'}
             </Button>
           </DialogFooter>

@@ -26,6 +26,8 @@ import { getTask, getTaskUsers, updateTask, getUsers } from '@/services/firestor
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { uploadFile } from '@/services/storage';
+import { FileUploader } from '@/components/ui/file-uploader';
+import { Loader2 } from 'lucide-react';
 
 
 const statusStyles: { [key: string]: string } = {
@@ -468,7 +470,7 @@ function MessageInput({newMessage, setNewMessage, task, replyTo, onClearReply, o
 function DocumentCard({ task, currentUser, onTaskUpdate }: { task: Task; currentUser: User; onTaskUpdate: (update: Partial<Task>) => Promise<void> }) {
     const [open, setOpen] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const { toast } = useToast();
 
@@ -477,31 +479,33 @@ function DocumentCard({ task, currentUser, onTaskUpdate }: { task: Task; current
     }, [])
 
     const handleUpload = async () => {
-        if (!selectedFile) {
-            toast({ variant: "destructive", title: "No file selected." });
+        if (!selectedFiles || selectedFiles.length === 0) {
+            toast({ variant: "destructive", title: "No files selected." });
             return;
         }
 
         setUploading(true);
         try {
-            const downloadURL = await uploadFile(selectedFile, `tasks/${task.id}/documents`);
-            const newDocument: Document = {
-                id: `doc_${Date.now()}`,
-                name: selectedFile.name,
-                url: downloadURL,
+            const uploadPromises = selectedFiles.map(file => uploadFile(file, `tasks/${task.id}/documents`));
+            const downloadURLs = await Promise.all(uploadPromises);
+
+            const newDocuments: Document[] = selectedFiles.map((file, index) => ({
+                id: `doc_${Date.now()}_${index}`,
+                name: file.name,
+                url: downloadURLs[index],
                 uploadedBy: currentUser.id,
                 createdAt: new Date().toISOString(),
-            };
+            }));
 
-            const updatedDocuments = [...(task.documents || []), newDocument];
+            const updatedDocuments = [...(task.documents || []), ...newDocuments];
             await onTaskUpdate({ documents: updatedDocuments });
             
-            toast({ title: "Document uploaded!" });
-            setSelectedFile(null);
+            toast({ title: "Documents uploaded!", description: `${selectedFiles.length} file(s) added.` });
+            setSelectedFiles([]);
             setOpen(false);
         } catch (error) {
             console.error("Failed to upload document:", error);
-            toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload the document." });
+            toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload the document(s)." });
         } finally {
             setUploading(false);
         }
@@ -518,20 +522,32 @@ function DocumentCard({ task, currentUser, onTaskUpdate }: { task: Task; current
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Upload a New Document</DialogTitle>
-                                <DialogDescription>This will be shared with everyone on this task.</DialogDescription>
+                                <DialogTitle>Upload New Document(s)</DialogTitle>
+                                <DialogDescription>These will be shared with everyone on this task.</DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4 py-4">
-                                <Label htmlFor="doc-file">Select file</Label>
-                                <Input 
-                                  id="doc-file" 
-                                  type="file" 
-                                  onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)}
+                                <FileUploader
+                                    value={selectedFiles}
+                                    onValueChange={setSelectedFiles}
+                                    dropzoneOptions={{
+                                        accept: {
+                                            'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
+                                            'application/pdf': ['.pdf'],
+                                            'application/msword': ['.doc'],
+                                            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+                                            'application/vnd.ms-excel': ['.xls'],
+                                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+                                            'application/vnd.ms-powerpoint': ['.ppt'],
+                                            'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+                                        },
+                                        maxSize: 10 * 1024 * 1024, // 10MB per file
+                                    }}
                                 />
                             </div>
                             <DialogFooter>
-                                <Button onClick={handleUpload} disabled={!selectedFile || uploading}>
-                                  {uploading ? 'Uploading...' : 'Upload Document'}
+                                <Button onClick={handleUpload} disabled={selectedFiles.length === 0 || uploading}>
+                                  {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                  {uploading ? 'Uploading...' : `Upload ${selectedFiles.length} File(s)`}
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
