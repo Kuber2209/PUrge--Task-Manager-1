@@ -88,13 +88,16 @@ export function Announcements() {
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold font-headline tracking-tight">Recent Announcements</h2>
+            <div className="flex items-center justify-between mb-6">
+                <div>
+                    <h2 className="text-2xl font-bold font-headline tracking-tight">Recent Announcements</h2>
+                    <p className="text-muted-foreground">Catch up on the latest updates and news.</p>
+                </div>
                 {canCreate && <CreateAnnouncementForm />}
             </div>
             <div className="space-y-6">
                 {recentAnnouncements.map(announcement => (
-                    <AnnouncementCard key={announcement.id} announcement={announcement} users={users} canManage={canCreate} />
+                    <AnnouncementCard key={announcement.id} announcement={announcement} users={users} canManage={canManage} />
                 ))}
                  {recentAnnouncements.length === 0 && !loading && (
                      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed shadow-sm h-40 bg-card">
