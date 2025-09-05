@@ -19,7 +19,6 @@ import { app } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserProfile } from '@/services/firestore';
 import { arrayUnion } from 'firebase/firestore';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 
 export function Dashboard() {
@@ -101,8 +100,7 @@ export function Dashboard() {
         <Tabs defaultValue={defaultTab} className="w-full flex flex-col" key={tabsKey}>
            <div className='px-4 md:px-8 bg-header border-b border-border'>
              <div className="max-w-7xl mx-auto">
-                <ScrollArea className="w-full whitespace-nowrap">
-                  <TabsList className="inline-flex w-max space-x-4">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-8">
                     <TabsTrigger value="announcements">Announcements</TabsTrigger>
                     <TabsTrigger value="resources">Resources</TabsTrigger>
                     <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -116,9 +114,7 @@ export function Dashboard() {
                     {(isJPT || isSPT) && <TabsTrigger value="live-tasks">Live Tasks</TabsTrigger>}
 
                     {(isJPT || isSPT) && <TabsTrigger value="team-logs">Team Logs</TabsTrigger>}
-                  </TabsList>
-                  <ScrollBar orientation="horizontal" />
-                </ScrollArea>
+                </TabsList>
              </div>
            </div>
            
