@@ -23,6 +23,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const ADMIN_EMAIL = 'f20240819@hyderabad.bits-pilani.ac.in';
+
 const handleBlacklistedAccess = async (email: string | null) => {
     if (!email) return;
     await signOut(auth);
@@ -46,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (fbUser) {
           setFirebaseUser(fbUser);
           
-          if (fbUser.email && await isEmailBlacklisted(fbUser.email)) {
+          if (fbUser.email && await isEmailBlacklisted(fbUser.email) && fbUser.email !== ADMIN_EMAIL) {
             await handleBlacklistedAccess(fbUser.email);
             setLoading(false);
             router.push('/access-declined');
@@ -57,13 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (userProfile) {
             // Existing user
-            if (userProfile.status === 'pending') {
+            if (userProfile.status === 'pending' && userProfile.email !== ADMIN_EMAIL) {
               router.push('/pending-approval');
             } else if (userProfile.status === 'declined') {
                await signOut(auth);
                router.push('/access-declined');
             } else {
-               // Active or undefined status (for existing users) is allowed
+               // Active, undefined status, or admin email is allowed
                setUser(userProfile);
             }
           } else {
@@ -74,15 +76,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
              }
 
             const isWhitelisted = await isEmailWhitelisted(fbUser.email);
+            const isAdmin = fbUser.email === ADMIN_EMAIL;
 
             const newUser: User = {
                 id: fbUser.uid,
                 name: fbUser.displayName || 'New User',
                 email: fbUser.email,
-                role: 'Associate', 
+                role: isAdmin ? 'SPT' : 'Associate', 
                 avatar: fbUser.photoURL || `https://i.pravatar.cc/150?u=${fbUser.uid}`,
                 isOnHoliday: false,
-                status: isWhitelisted ? 'active' : 'pending',
+                status: isAdmin || isWhitelisted ? 'active' : 'pending',
             };
             await createUserProfile(newUser);
             setUser(newUser);
@@ -108,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [router]);
 
   const logIn = async (email: string, pass: string) => {
-     if (await isEmailBlacklisted(email)) {
+     if (await isEmailBlacklisted(email) && email !== ADMIN_EMAIL) {
         toast({
             variant: 'destructive',
             title: 'Access Denied',
@@ -120,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   
   const signUp = async (email: string, pass:string, name: string) => {
-    if (await isEmailBlacklisted(email)) {
+    if (await isEmailBlacklisted(email) && email !== ADMIN_EMAIL) {
         toast({
             variant: 'destructive',
             title: 'Access Denied',
@@ -137,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const provider = new GoogleAuthProvider();
     const result = await signInWithPopup(auth, provider);
     const email = result.user.email;
-     if (email && await isEmailBlacklisted(email)) {
+     if (email && await isEmailBlacklisted(email) && email !== ADMIN_EMAIL) {
         await signOut(auth); // Sign out immediately
         toast({
             variant: 'destructive',
