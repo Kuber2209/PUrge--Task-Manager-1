@@ -4,7 +4,7 @@
 import type { User } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { LogOut, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '../theme-toggle';
 import { useAuth } from '@/hooks/use-auth';
@@ -19,6 +19,7 @@ function TieIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+const ADMIN_EMAIL = 'f20240819@hyderabad.bits-pilani.ac.in';
 
 export function Header() {
   const { user, logOut } = useAuth();
@@ -28,6 +29,8 @@ export function Header() {
     await logOut();
     router.push('/login');
   };
+
+  const isAdmin = user?.email === ADMIN_EMAIL;
   
   return (
     <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-header px-4 md:px-8 z-10">
@@ -51,6 +54,15 @@ export function Header() {
                 <span className="text-xs text-muted-foreground">{user.role}</span>
               </div>
             </div>
+          )}
+
+          {isAdmin && (
+             <Button variant="ghost" size="icon" asChild className="text-header-foreground hover:text-header-foreground hover:bg-white/10">
+               <Link href="/admin">
+                <Shield className="h-5 w-5" />
+                <span className="sr-only">Admin</span>
+              </Link>
+            </Button>
           )}
 
           <Button variant="ghost" size="icon" onClick={handleLogout} className="text-header-foreground hover:text-header-foreground hover:bg-white/10">
