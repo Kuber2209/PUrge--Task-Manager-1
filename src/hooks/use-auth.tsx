@@ -6,8 +6,9 @@ import React, {createContext, useContext, useState, useEffect, ReactNode} from '
 import {onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, type User as FirebaseUser} from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import type { User, UserRole } from '@/lib/types';
-import { createUserProfile, getUserProfile, isEmailWhitelisted } from '@/services/firestore';
+import { createUserProfile, getUserProfile, isEmailBlacklisted, addEmailToBlacklist } from '@/services/firestore';
 import { toast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -22,12 +23,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const handleUnauthorizedAccess = async (email: string | null) => {
+const handleBlacklistedAccess = async (email: string | null) => {
+    if (!email) return;
     await signOut(auth);
     toast({
         variant: 'destructive',
         title: 'Access Denied',
-        description: `The email ${email} is not authorized. Please contact an admin.`,
+        description: `The email ${email} is on the blacklist.`,
         duration: 5000,
     });
 }
@@ -36,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
@@ -43,24 +46,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (fbUser) {
           setFirebaseUser(fbUser);
           
+          if (fbUser.email && await isEmailBlacklisted(fbUser.email)) {
+            await handleBlacklistedAccess(fbUser.email);
+            setLoading(false);
+            router.push('/access-declined');
+            return;
+          }
+
           let userProfile = await getUserProfile(fbUser.uid);
 
           if (userProfile) {
-            setUser(userProfile);
+            // Existing user
+            if (userProfile.status === 'pending') {
+              router.push('/pending-approval');
+            } else if (userProfile.status === 'declined') {
+               await signOut(auth);
+               router.push('/access-declined');
+            } else {
+               // Active or undefined status (for existing users) is allowed
+               setUser(userProfile);
+            }
           } else {
-             // This is a new user (or first-time login via Google)
+             // This is a new user
              if (!fbUser.email) {
-                // If email is not available yet, don't proceed. Auth state will change again.
                 setLoading(false);
                 return;
              }
-            const isWhitelisted = await isEmailWhitelisted(fbUser.email);
-
-            if (!isWhitelisted) {
-                await handleUnauthorizedAccess(fbUser.email);
-                setLoading(false); // Ensure loading is false before exiting
-                return;
-            }
 
             const newUser: User = {
                 id: fbUser.uid,
@@ -69,9 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 role: 'Associate', 
                 avatar: fbUser.photoURL || `https://i.pravatar.cc/150?u=${fbUser.uid}`,
                 isOnHoliday: false,
+                status: 'pending', // New users are pending approval
             };
             await createUserProfile(newUser);
             setUser(newUser);
+            router.push('/pending-approval'); // Redirect new users to pending page
           }
         } else {
           setFirebaseUser(null);
@@ -87,21 +100,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
-  const logIn = (email: string, pass: string) => {
+  const logIn = async (email: string, pass: string) => {
+     if (await isEmailBlacklisted(email)) {
+        toast({
+            variant: 'destructive',
+            title: 'Access Denied',
+            description: 'This email is on the blacklist.',
+        });
+        throw new Error("Email is blacklisted");
+    }
     return signInWithEmailAndPassword(auth, email, pass);
   };
   
   const signUp = async (email: string, pass:string, name: string) => {
-    const isWhitelisted = await isEmailWhitelisted(email);
-    if (!isWhitelisted) {
+    if (await isEmailBlacklisted(email)) {
         toast({
             variant: 'destructive',
-            title: 'Unauthorized Email',
-            description: 'This email is not on the whitelist. Please contact an administrator.',
+            title: 'Access Denied',
+            description: 'This email is on the blacklist.',
         });
-        throw new Error("Email not whitelisted");
+        throw new Error("Email is blacklisted");
     }
 
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
@@ -114,17 +134,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: 'Associate',
         avatar: `https://i.pravatar.cc/150?u=${fbUser.uid}`,
         isOnHoliday: false,
+        status: 'pending'
     };
     await createUserProfile(newUser);
-    setUser(newUser); // Set user immediately after creation
+    setUser(newUser);
   };
 
-  const signInWithGoogle = () => {
+  const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    return signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
+    const email = result.user.email;
+     if (email && await isEmailBlacklisted(email)) {
+        await signOut(auth); // Sign out immediately
+        toast({
+            variant: 'destructive',
+            title: 'Access Denied',
+            description: 'This email is on the blacklist.',
+        });
+        throw new Error("Email is blacklisted");
+    }
+    // onAuthStateChanged will handle the rest
+    return result;
   }
 
   const logOut = () => {
+    router.push('/login');
     return signOut(auth);
   };
 

@@ -3,6 +3,7 @@
 export type UserRole = 'SPT' | 'JPT' | 'Associate';
 export type AssignableRole = 'JPT' | 'Associate';
 export type AnnouncementAudience = 'all' | 'jpt-only';
+export type UserStatus = 'pending' | 'active' | 'declined';
 
 export interface User {
   id: string; // This will be the Firebase Auth UID
@@ -12,6 +13,7 @@ export interface User {
   email: string;
   notificationTokens?: string[]; // For FCM
   isOnHoliday?: boolean;
+  status?: UserStatus;
 }
 
 export interface VoiceNote {

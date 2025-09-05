@@ -9,7 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserManagementTable } from '@/components/admin/user-management-table';
-import { WhitelistManagement } from '@/components/admin/whitelist-management';
+import { ApprovalQueue } from '@/components/admin/approval-queue';
+import { BlacklistManagement } from '@/components/admin/whitelist-management';
 
 const ADMIN_EMAIL = 'f20240819@hyderabad.bits-pilani.ac.in';
 
@@ -18,18 +19,15 @@ export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // If auth checking is done and there is no user, redirect to login.
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
 
-  // While the auth state is being checked, show a global loading indicator.
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center">Verifying credentials...</div>;
   }
 
-  // After the initial load, if the user is not the designated admin, deny access.
   if (user?.email !== ADMIN_EMAIL) {
     return (
       <div className="flex min-h-screen w-full flex-col">
@@ -44,7 +42,6 @@ export default function AdminPage() {
     );
   }
 
-  // If we have an admin user, render the admin dashboard.
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/20">
       <Header />
@@ -54,8 +51,17 @@ export default function AdminPage() {
             <div className="grid gap-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>User Role Management</CardTitle>
-                        <CardDescription>Assign roles and manage user access. Changes are saved automatically.</CardDescription>
+                        <CardTitle>Pending User Approvals</CardTitle>
+                        <CardDescription>Approve or decline new users who have signed up.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                       <ApprovalQueue />
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Active User Role Management</CardTitle>
+                        <CardDescription>Assign roles to active users. Changes are saved automatically.</CardDescription>
                     </CardHeader>
                     <CardContent>
                        <UserManagementTable />
@@ -63,11 +69,11 @@ export default function AdminPage() {
                 </Card>
                  <Card>
                     <CardHeader>
-                        <CardTitle>Whitelist Management</CardTitle>
-                        <CardDescription>Control which email addresses are allowed to sign up.</CardDescription>
+                        <CardTitle>Email Blacklist Management</CardTitle>
+                        <CardDescription>Add or remove emails from the blacklist to block them from signing up.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <WhitelistManagement />
+                        <BlacklistManagement />
                     </CardContent>
                 </Card>
             </div>

@@ -12,7 +12,11 @@ export default function Home() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        router.push('/dashboard');
+        if (user.status === 'pending') {
+          router.push('/pending-approval');
+        } else {
+          router.push('/dashboard');
+        }
       } else {
         router.push('/login');
       }

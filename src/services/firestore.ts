@@ -46,12 +46,52 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
 };
 
 // Get all users
-export const getUsers = async (): Promise<User[]> => {
+export const getUsers = async (status?: 'pending' | 'active' | 'not-pending-or-declined'): Promise<User[]> => {
     const usersCollection = collection(db, 'users');
-    const q = query(usersCollection);
+    let q;
+
+    if (status === 'pending') {
+        q = query(usersCollection, where('status', '==', 'pending'));
+    } else if (status === 'active') {
+        q = query(usersCollection, where('status', '==', 'active'));
+    } else if (status === 'not-pending-or-declined') {
+        q = query(usersCollection, where('status', 'not-in', ['pending', 'declined']));
+    } else {
+        q = query(usersCollection);
+    }
+    
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => doc.data() as User);
 }
+
+// == BLACKLIST FUNCTIONS ==
+export const addEmailToBlacklist = async (email: string): Promise<void> => {
+    if (!email) return;
+    const blacklistRef = doc(db, 'blacklist', email.toLowerCase());
+    await setDoc(blacklistRef, { email: email.toLowerCase(), createdAt: new Date().toISOString() });
+};
+
+export const removeEmailFromBlacklist = async (email: string): Promise<void> => {
+    const blacklistRef = doc(db, 'blacklist', email.toLowerCase());
+    await deleteDoc(blacklistRef);
+};
+
+export const isEmailBlacklisted = async (email: string): Promise<boolean> => {
+    if (!email) return false;
+    const blacklistRef = doc(db, 'blacklist', email.toLowerCase());
+    const docSnap = await getDoc(blacklistRef);
+    return docSnap.exists();
+};
+
+export const getBlacklist = (callback: (emails: { id: string, email: string }[]) => void): (() => void) => {
+    const blacklistCollection = collection(db, 'blacklist');
+    const q = query(blacklistCollection, orderBy('createdAt', 'desc'));
+    return onSnapshot(q, (querySnapshot) => {
+        const emails = querySnapshot.docs.map(doc => ({ id: doc.id, email: doc.data().email as string }));
+        callback(emails);
+    });
+};
+
 
 // == WHITELIST FUNCTIONS ==
 

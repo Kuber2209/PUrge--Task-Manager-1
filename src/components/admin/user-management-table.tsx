@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -18,7 +19,8 @@ export function UserManagementTable() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const fetchedUsers = await getUsers();
+        // Fetch users whose status is not 'pending' or 'declined'
+        const fetchedUsers = await getUsers('not-pending-or-declined');
         setUsers(fetchedUsers);
       } catch (error) {
         console.error("Failed to fetch users:", error);
@@ -65,6 +67,10 @@ export function UserManagementTable() {
         <Skeleton className="h-12 w-full" />
       </div>
     );
+  }
+  
+  if(users.length === 0) {
+    return <p className="text-center text-muted-foreground py-4">No active users found.</p>
   }
 
   return (
