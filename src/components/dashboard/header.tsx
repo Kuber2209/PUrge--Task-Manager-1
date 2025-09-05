@@ -34,7 +34,7 @@ export function Header() {
       <div className="flex items-center gap-8 max-w-7xl mx-auto w-full">
         <Link href="/dashboard" className="flex items-center gap-3">
           <TieIcon className="h-6 w-6 text-primary" />
-          <h1 className="text-xl font-bold font-headline text-foreground hidden sm:block">PUrge BPHC</h1>
+          <h1 className="text-xl font-bold font-headline text-header-foreground hidden sm:block">PUrge BPHC</h1>
         </Link>
         <div className="ml-auto flex items-center gap-4">
 
@@ -47,17 +47,19 @@ export function Header() {
                 </Avatar>
               </Link>
               <div className='hidden sm:flex flex-col text-left'>
-                <span className="text-sm font-medium">{user.name}</span>
+                <span className="text-sm font-medium text-header-foreground">{user.name}</span>
                 <span className="text-xs text-muted-foreground">{user.role}</span>
               </div>
             </div>
           )}
 
-          <Button variant="ghost" size="icon" onClick={handleLogout}>
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-header-foreground hover:text-header-foreground hover:bg-white/10">
             <LogOut className="h-5 w-5" />
             <span className="sr-only">Logout</span>
           </Button>
-          <ThemeToggle />
+          <div className="text-header-foreground">
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </header>

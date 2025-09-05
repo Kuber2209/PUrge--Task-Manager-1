@@ -19,6 +19,7 @@ import { app } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserProfile } from '@/services/firestore';
 import { arrayUnion } from 'firebase/firestore';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 
 export function Dashboard() {
@@ -99,21 +100,26 @@ export function Dashboard() {
       <main className="flex flex-1 flex-col">
         <Tabs defaultValue={defaultTab} className="w-full flex flex-col" key={tabsKey}>
            <div className='px-4 md:px-8 bg-header border-b border-border'>
-             <TabsList className="grid w-full max-w-7xl mx-auto h-auto grid-cols-4 md:grid-cols-8">
-              <TabsTrigger value="announcements">Announcements</TabsTrigger>
-              <TabsTrigger value="resources">Resources</TabsTrigger>
-              <TabsTrigger value="calendar">Calendar</TabsTrigger>
-              
-              {(isJPT || isSPT) && <TabsTrigger value="posted-tasks">My Posted Tasks</TabsTrigger>}
-              
-              {(isJPT || isAssociate) && <TabsTrigger value="available-tasks">Available Tasks</TabsTrigger>}
-              
-              {(isJPT || isAssociate) && <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>}
-              
-              {(isJPT || isSPT) && <TabsTrigger value="live-tasks">Live Tasks</TabsTrigger>}
+             <div className="max-w-7xl mx-auto">
+                <ScrollArea className="w-full whitespace-nowrap">
+                  <TabsList className="inline-flex w-max space-x-4">
+                    <TabsTrigger value="announcements">Announcements</TabsTrigger>
+                    <TabsTrigger value="resources">Resources</TabsTrigger>
+                    <TabsTrigger value="calendar">Calendar</TabsTrigger>
+                    
+                    {(isJPT || isSPT) && <TabsTrigger value="posted-tasks">My Posted Tasks</TabsTrigger>}
+                    
+                    {(isJPT || isAssociate) && <TabsTrigger value="available-tasks">Available Tasks</TabsTrigger>}
+                    
+                    {(isJPT || isAssociate) && <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>}
+                    
+                    {(isJPT || isSPT) && <TabsTrigger value="live-tasks">Live Tasks</TabsTrigger>}
 
-              {(isJPT || isSPT) && <TabsTrigger value="team-logs">Team Logs</TabsTrigger>}
-            </TabsList>
+                    {(isJPT || isSPT) && <TabsTrigger value="team-logs">Team Logs</TabsTrigger>}
+                  </TabsList>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+             </div>
            </div>
            
            <div className="p-4 md:p-8 flex-1">
