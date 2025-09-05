@@ -258,28 +258,22 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
     setUploading(true);
 
     try {
-        let finalData: Partial<Omit<Resource, 'id' | 'createdAt' | 'createdBy' | 'comments'>> = {
+        const finalData: Partial<Omit<Resource, 'id' | 'createdAt' | 'createdBy' | 'comments'>> = {
             title: data.title,
             description: data.description,
-            link: data.link || undefined,
         };
 
-        // If a new file is being uploaded, it takes precedence.
         if (data.file && data.file.length > 0) {
             const tempId = resource?.id || `temp_${Date.now()}`;
             const downloadURL = await uploadFile(data.file[0], `resources/${tempId}/`);
             finalData.document = { name: data.file[0].name, url: downloadURL };
-            finalData.link = undefined; // Ensure link is cleared if document is added
-        } else {
-             // If no new file, retain the existing document unless it's been cleared
+        } else if (data.document) {
             finalData.document = data.document;
         }
 
-        // If there's neither a new file nor an existing document, check for a link
-        if (!finalData.document) {
-            finalData.link = data.link || undefined;
+        if (data.link) {
+            finalData.link = data.link;
         }
-
 
         if(isEdit && resource) {
             await updateResource(resource.id, finalData);
@@ -288,12 +282,13 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
             const newResourceData: Omit<Resource, 'id'> = {
                 title: finalData.title!,
                 description: finalData.description,
-                link: finalData.link,
-                document: finalData.document,
                 createdBy: currentUser.id,
                 createdAt: new Date().toISOString(),
                 comments: [],
             };
+
+            if (finalData.link) newResourceData.link = finalData.link;
+            if (finalData.document) newResourceData.document = finalData.document;
             
             await createResource(newResourceData);
             toast({ title: 'Resource Posted!', description: `The resource "${data.title}" is now live.` });
@@ -451,3 +446,4 @@ function ResourceActions({ resource }: { resource: Resource }) {
 
 
     
+
