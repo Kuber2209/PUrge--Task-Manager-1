@@ -83,7 +83,7 @@ export function TaskItem({ task, users, onTaskUpdate }: TaskItemProps) {
     return false;
   }, [task, currentUser, isUserAssigned, isAssignable, assignedRolesCount]);
 
-  const canComplete = (task.status === 'In Progress' || task.status === 'Open') && isUserAssigned;
+  const canComplete = (task.status !== 'In Progress' && task.status !== 'Open') && isUserAssigned;
   const isCreator = task.createdBy === currentUser.id;
   const canViewDetails = true; // Everyone can view details now
   const canManage = currentUser.role === 'SPT' || (currentUser.role === 'JPT' && isCreator);

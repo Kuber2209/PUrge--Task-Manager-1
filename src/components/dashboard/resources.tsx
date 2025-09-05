@@ -246,7 +246,7 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
 
   useEffect(() => {
     if (isEdit && resource) {
-      reset({ title: resource.title, description: resource.description, linkUrl: resource.link?.url, linkName: resource.link?.name, file: [], document: resource.document });
+      reset({ title: resource.title, description: resource.description || '', linkUrl: resource.link?.url || '', linkName: resource.link?.name || '', file: [], document: resource.document });
     } else {
       reset({ title: '', description: '', linkUrl: '', linkName: '', file: [], document: undefined });
     }
@@ -265,6 +265,12 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
         };
 
         if (data.description) finalData.description = data.description;
+        
+        if (data.linkUrl) {
+            finalData.link = { url: data.linkUrl, name: data.linkName || data.linkUrl };
+        } else {
+            finalData.link = undefined;
+        }
 
         if (data.file && data.file.length > 0) {
             const tempId = resource?.id || `temp_${Date.now()}`;
@@ -272,24 +278,26 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
             finalData.document = { name: data.file[0].name, url: downloadURL };
         } else if (data.document) {
             finalData.document = data.document;
+        } else {
+            finalData.document = undefined;
         }
-
-        if (data.linkUrl) {
-            finalData.link = { url: data.linkUrl, name: data.linkName || data.linkUrl };
-        }
+        
+        const updatePayload: any = { ...finalData };
+        if (updatePayload.link === undefined) delete updatePayload.link;
+        if (updatePayload.document === undefined) delete updatePayload.document;
 
         if(isEdit && resource) {
-            await updateResource(resource.id, finalData);
+            await updateResource(resource.id, updatePayload);
             toast({ title: 'Resource Updated!' });
         } else {
             const newResourceData: Omit<Resource, 'id'> = {
                 title: finalData.title!,
+                description: finalData.description || '',
                 createdBy: currentUser.id,
                 createdAt: new Date().toISOString(),
                 comments: [],
             };
 
-            if (finalData.description) newResourceData.description = finalData.description;
             if (finalData.link) newResourceData.link = finalData.link;
             if (finalData.document) newResourceData.document = finalData.document;
             
@@ -452,9 +460,3 @@ function ResourceActions({ resource }: { resource: Resource }) {
         </>
     )
 }
-
-
-
-    
-
-
