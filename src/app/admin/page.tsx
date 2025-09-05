@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -7,6 +8,7 @@ import { Header } from '@/components/dashboard/header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { UserManagementTable } from '@/components/admin/user-management-table';
 
 const ADMIN_EMAIL = 'f20240819@hyderabad.bits-pilani.ac.in';
 
@@ -43,37 +45,28 @@ export default function AdminPage() {
 
   // If we have an admin user, render the admin dashboard.
   return (
-    <div className="flex min-h-screen w-full flex-col">
+    <div className="flex min-h-screen w-full flex-col bg-muted/20">
       <Header />
       <main className="flex-1 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
-            <h1 className="text-3xl font-bold font-headline mb-4">Admin Dashboard</h1>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <h1 className="text-3xl font-bold font-headline mb-6">Admin Dashboard</h1>
+            <div className="grid gap-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>User Management</CardTitle>
-                        <CardDescription>Assign roles and manage user access.</CardDescription>
+                        <CardTitle>User Role Management</CardTitle>
+                        <CardDescription>Assign roles and manage user access. Changes are saved automatically.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm text-muted-foreground">Coming soon...</p>
+                       <UserManagementTable />
                     </CardContent>
                 </Card>
-                <Card>
+                 <Card>
                     <CardHeader>
-                        <CardTitle>Analytics</CardTitle>
-                        <CardDescription>View application usage statistics.</CardDescription>
+                        <CardTitle>Whitelist Management</CardTitle>
+                        <CardDescription>This feature is best managed in the Firebase console for security.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm text-muted-foreground">Coming soon...</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>App Settings</CardTitle>
-                        <CardDescription>Configure roles and permissions.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-muted-foreground">Coming soon...</p>
+                        <p className="text-sm text-muted-foreground">To control who can sign up, you should use Firebase Authentication's native features or secure your database with Firestore Security Rules.</p>
                     </CardContent>
                 </Card>
             </div>
