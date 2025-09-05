@@ -204,7 +204,7 @@ function ResourceCard({ resource, users, currentUser, canManage }: { resource: R
 const resourceSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters long.'),
   description: z.string().min(10, 'Description must be at least 10 characters long.'),
-  link: z.string().optional(),
+  link: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
   file: z.array(z.instanceof(File)).optional(),
   document: z.custom<Resource['document']>().optional(),
 });
@@ -247,6 +247,7 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
     try {
         let resourceDocument = data.document;
 
+        // If a new file is uploaded, it takes precedence over the link.
         if (data.file && data.file.length > 0) {
             const tempId = resource?.id || `temp_${Date.now()}`;
             const downloadURL = await uploadFile(data.file[0], `resources/${tempId}/`);
@@ -256,7 +257,8 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
         const finalData = { 
             title: data.title,
             description: data.description,
-            link: data.link,
+            // If there's a document, don't save the link.
+            link: resourceDocument ? undefined : data.link,
             document: resourceDocument 
         };
 
@@ -276,6 +278,7 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
         reset({ title: '', description: '', link: '', file: [], document: undefined });
 
     } catch (err) {
+         console.error("Failed to save resource:", err);
          toast({variant: 'destructive', title: "An Error Occurred", description: "Could not save the resource."});
     } finally {
         setUploading(false);
@@ -312,7 +315,7 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
             </div>
              <div className="space-y-2">
               <Label htmlFor="link">Link (Optional)</Label>
-              <Input id="link" {...register('link')} placeholder="https://example.com" />
+              <Input id="link" {...register('link')} placeholder="https://example.com" disabled={!!file} />
               {errors.link && <p className="text-sm text-destructive">{errors.link.message}</p>}
             </div>
             <p className="text-center text-xs text-muted-foreground">OR</p>
@@ -420,3 +423,4 @@ function ResourceActions({ resource }: { resource: Resource }) {
         </>
     )
 }
+
