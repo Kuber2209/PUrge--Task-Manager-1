@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,13 +27,21 @@ export function BlacklistManagement() {
     resolver: zodResolver(blacklistSchema),
   });
 
+  const fetchBlacklist = useCallback(async () => {
+    setLoading(true);
+    try {
+        const emails = await getBlacklist();
+        setBlacklistedEmails(emails);
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load the blacklist.' });
+    } finally {
+        setLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
-    const unsubscribe = getBlacklist((emails) => {
-      setBlacklistedEmails(emails);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    fetchBlacklist();
+  }, [fetchBlacklist]);
 
   const handleAddEmail = async (data: BlacklistFormData) => {
     try {
@@ -43,6 +51,7 @@ export function BlacklistManagement() {
         description: `${data.email} has been added to the blacklist.`,
       });
       reset();
+      fetchBlacklist(); // Refresh list
     } catch (error) {
       console.error('Failed to add email to blacklist:', error);
       toast({
@@ -60,6 +69,7 @@ export function BlacklistManagement() {
         title: 'Email Removed',
         description: `${email} has been removed from the blacklist.`,
       });
+      fetchBlacklist(); // Refresh list
     } catch (error) {
       console.error('Failed to remove email from blacklist:', error);
       toast({

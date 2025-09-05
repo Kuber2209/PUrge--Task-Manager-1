@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,13 +27,22 @@ export function WhitelistManagement() {
     resolver: zodResolver(whitelistSchema),
   });
 
+  const fetchWhitelist = useCallback(async () => {
+    setLoading(true);
+    try {
+        const emails = await getWhitelist();
+        setWhitelistedEmails(emails);
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load the whitelist.' });
+    } finally {
+        setLoading(false);
+    }
+  }, [toast]);
+
+
   useEffect(() => {
-    const unsubscribe = getWhitelist((emails) => {
-      setWhitelistedEmails(emails);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    fetchWhitelist();
+  }, [fetchWhitelist]);
 
   const handleAddEmail = async (data: WhitelistFormData) => {
     try {
@@ -43,6 +52,7 @@ export function WhitelistManagement() {
         description: `${data.email} has been added to the whitelist.`,
       });
       reset();
+      fetchWhitelist();
     } catch (error) {
       console.error('Failed to add email to whitelist:', error);
       toast({
@@ -60,6 +70,7 @@ export function WhitelistManagement() {
         title: 'Email Removed',
         description: `${email} has been removed from the whitelist.`,
       });
+      fetchWhitelist();
     } catch (error) {
       console.error('Failed to remove email from whitelist:', error);
       toast({

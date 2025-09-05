@@ -55,24 +55,28 @@ export const getUsers = async (status?: 'pending' | 'active' | 'not-pending-or-d
     } else if (status === 'active') {
         q = query(usersCollection, where('status', '==', 'active'));
     } else if (status === 'not-pending-or-declined') {
-        const activeQuery = query(usersCollection, where('status', '==', 'active'));
-        const allUsersSnapshot = await getDocs(query(usersCollection));
-        const activeUsers = (await getDocs(activeQuery)).docs.map(doc => doc.data() as User);
-        
-        const noStatusUsers = allUsersSnapshot.docs
-            .map(doc => doc.data() as User)
-            .filter(user => user.status === undefined);
-
-        const allRelevantUsers = [...activeUsers, ...noStatusUsers];
-        const uniqueUsers = Array.from(new Map(allRelevantUsers.map(user => [user.id, user])).values());
-        return uniqueUsers;
-
+        q = query(usersCollection, where('status', 'not-in', ['pending', 'declined']));
     } else {
         q = query(usersCollection);
     }
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.data() as User);
+    const usersFromQuery = querySnapshot.docs.map(doc => doc.data() as User);
+
+    // If fetching 'not-pending-or-declined', we also need users who have no status field.
+    if (status === 'not-pending-or-declined') {
+        const allUsersSnapshot = await getDocs(collection(db, 'users'));
+        const usersWithNoStatus = allUsersSnapshot.docs
+            .map(doc => doc.data() as User)
+            .filter(user => user.status === undefined);
+        
+        // Combine and remove duplicates
+        const allRelevantUsers = [...usersFromQuery, ...usersWithNoStatus];
+        const uniqueUsers = Array.from(new Map(allRelevantUsers.map(user => [user.id, user])).values());
+        return uniqueUsers;
+    }
+
+    return usersFromQuery;
 }
 
 // Debar a user - adds them to blacklist and sets status to declined
@@ -110,13 +114,11 @@ export const isEmailBlacklisted = async (email: string): Promise<boolean> => {
     return docSnap.exists();
 };
 
-export const getBlacklist = (callback: (emails: { id: string, email: string }[]) => void): (() => void) => {
+export const getBlacklist = async (): Promise<{ id: string, email: string }[]> => {
     const blacklistCollection = collection(db, 'blacklist');
     const q = query(blacklistCollection, orderBy('createdAt', 'desc'));
-    return onSnapshot(q, (querySnapshot) => {
-        const emails = querySnapshot.docs.map(doc => ({ id: doc.id, email: doc.data().email as string }));
-        callback(emails);
-    });
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, email: doc.data().email as string }));
 };
 
 
@@ -144,13 +146,11 @@ export const isEmailWhitelisted = async (email: string): Promise<boolean> => {
 };
 
 // Get all whitelisted emails with real-time updates
-export const getWhitelist = (callback: (emails: { id: string, email: string }[]) => void): (() => void) => {
+export const getWhitelist = async (): Promise<{ id: string, email: string }[]> => {
     const whitelistCollection = collection(db, 'whitelist');
     const q = query(whitelistCollection, orderBy('createdAt', 'desc'));
-    return onSnapshot(q, (querySnapshot) => {
-        const emails = querySnapshot.docs.map(doc => ({ id: doc.id, email: doc.data().email as string }));
-        callback(emails);
-    });
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, email: doc.data().email as string }));
 };
 
 
