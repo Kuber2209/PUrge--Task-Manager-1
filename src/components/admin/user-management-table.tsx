@@ -37,7 +37,7 @@ export function UserManagementTable() {
     fetchUsers();
   }, [toast]);
 
-  async function handleRoleChange(userId: string, newRole: UserRole) {
+  const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
       await updateUserProfile(userId, { role: newRole });
       setUsers(prevUsers =>
@@ -57,7 +57,7 @@ export function UserManagementTable() {
       });
       console.error('Failed to update role:', error);
     }
-  }
+  };
 
   if (loading) {
     return (
