@@ -295,6 +295,10 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
       
       delete (finalData as any).files;
       delete (finalData as any).deadlineTime;
+      
+      // Fool-proof check for all potentially undefined fields
+      if (!finalData.voiceNoteUrl) delete finalData.voiceNoteUrl;
+      if (!finalData.description) delete finalData.description;
 
       if (!finalData.assignableTo.includes('JPT')) {
           delete finalData.requiredJpts;
@@ -320,7 +324,6 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
             documents: uploadedDocuments,
             deadline: deadlineISO,
             isAnonymous: data.isAnonymous || false,
-            voiceNoteUrl: data.voiceNoteUrl,
           };
           
           if (data.assignableTo.includes('JPT')) {
@@ -328,6 +331,9 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
           }
           if (data.assignableTo.includes('Associate')) {
               newTaskData.requiredAssociates = data.requiredAssociates;
+          }
+          if (data.voiceNoteUrl) {
+            newTaskData.voiceNoteUrl = data.voiceNoteUrl;
           }
           
           await createTask(newTaskData);
