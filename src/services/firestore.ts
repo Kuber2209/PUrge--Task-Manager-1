@@ -37,7 +37,7 @@ export const updateUserProfile = async (userId: string, updates: Partial<User>):
 
 // Get a single user profile
 export const getUserProfile = async (userId: string): Promise<User | null> => {
-  const userRef = doc(db, 'users', userId);
+  const userRef = doc(db, 'users', user.id);
   const docSnap = await getDoc(userRef);
   if (docSnap.exists()) {
     return docSnap.data() as User;
@@ -55,7 +55,26 @@ export const getUsers = async (status?: 'pending' | 'active' | 'not-pending-or-d
     } else if (status === 'active') {
         q = query(usersCollection, where('status', '==', 'active'));
     } else if (status === 'not-pending-or-declined') {
-        q = query(usersCollection, where('status', 'not-in', ['pending', 'declined']));
+        // This is tricky. A `not-in` query only returns documents where the field exists.
+        // We need to fetch users with status 'active' AND users without a status field.
+        const activeQuery = query(usersCollection, where('status', '==', 'active'));
+        const noStatusQuery = query(usersCollection, where('status', '==', null)); // A trick to find docs without the field
+        
+        const [activeSnapshot, noStatusSnapshot] = await Promise.all([
+            getDocs(activeQuery),
+            getDocs(query(usersCollection)) // Fetch all and filter client-side for no-status
+        ]);
+        
+        const activeUsers = activeSnapshot.docs.map(doc => doc.data() as User);
+        const noStatusUsers = noStatusSnapshot.docs
+            .map(doc => doc.data() as User)
+            .filter(user => user.status === undefined);
+
+        const allRelevantUsers = [...activeUsers, ...noStatusUsers];
+        // Deduplicate in case a user somehow ends up in both lists (shouldn't happen)
+        const uniqueUsers = Array.from(new Map(allRelevantUsers.map(user => [user.id, user])).values());
+        return uniqueUsers;
+
     } else {
         q = query(usersCollection);
     }
