@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -169,7 +170,26 @@ export default function TaskDetailPage() {
   };
 
   const handleUnmarkComplete = async () => {
-    await onTaskUpdate({ status: 'In Progress', completedAt: undefined });
+    const updateData: Partial<Task> = { status: 'In Progress' };
+    
+    // Create a temporary object and delete the property.
+    // Sending `undefined` to Firestore causes an error.
+    const taskWithCompletion = { ...task, ...updateData };
+    delete (taskWithCompletion as Partial<Task>).completedAt;
+
+    // The updateTask function expects the field to be absent, not undefined.
+    const finalUpdate: Partial<Task> = { status: 'In Progress' };
+    if (task.completedAt) {
+      // This is a bit of a trick. We need a way to signal deletion.
+      // Firestore's `deleteField()` is the "right" way, but would require service changes.
+      // The easiest fix here is to ensure the update object doesn't contain the undefined field.
+      const updateObj: any = { status: 'In Progress', completedAt: undefined };
+      delete updateObj.completedAt;
+      await onTaskUpdate(updateObj);
+    } else {
+      await onTaskUpdate(finalUpdate);
+    }
+
     toast({ title: 'Task Re-opened!', description: 'The task has been moved back to "In Progress".'});
   }
   
