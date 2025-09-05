@@ -26,7 +26,7 @@ import {
 // Create or update a user profile
 export const createUserProfile = async (user: User): Promise<void> => {
   const userRef = doc(db, 'users', user.id);
-  await setDoc(userRef, user);
+  await setDoc(userRef, user, { merge: true });
 };
 
 // Update a user profile
