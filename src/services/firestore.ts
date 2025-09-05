@@ -53,6 +53,39 @@ export const getUsers = async (): Promise<User[]> => {
     return querySnapshot.docs.map(doc => doc.data() as User);
 }
 
+// == WHITELIST FUNCTIONS ==
+
+// Add an email to the whitelist
+export const addEmailToWhitelist = async (email: string): Promise<void> => {
+    const whitelistRef = doc(db, 'whitelist', email.toLowerCase());
+    await setDoc(whitelistRef, { email: email.toLowerCase(), createdAt: new Date().toISOString() });
+};
+
+// Remove an email from the whitelist
+export const removeEmailFromWhitelist = async (email: string): Promise<void> => {
+    const whitelistRef = doc(db, 'whitelist', email.toLowerCase());
+    await deleteDoc(whitelistRef);
+};
+
+// Check if an email is whitelisted
+export const isEmailWhitelisted = async (email: string): Promise<boolean> => {
+    if (!email) return false;
+    const whitelistRef = doc(db, 'whitelist', email.toLowerCase());
+    const docSnap = await getDoc(whitelistRef);
+    return docSnap.exists();
+};
+
+// Get all whitelisted emails with real-time updates
+export const getWhitelist = (callback: (emails: { id: string, email: string }[]) => void): (() => void) => {
+    const whitelistCollection = collection(db, 'whitelist');
+    const q = query(whitelistCollection, orderBy('createdAt', 'desc'));
+    return onSnapshot(q, (querySnapshot) => {
+        const emails = querySnapshot.docs.map(doc => ({ id: doc.id, email: doc.data().email as string }));
+        callback(emails);
+    });
+};
+
+
 // == TASK FUNCTIONS ==
 
 // Create a new task

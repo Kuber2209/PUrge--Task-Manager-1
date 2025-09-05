@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserManagementTable } from '@/components/admin/user-management-table';
+import { WhitelistManagement } from '@/components/admin/whitelist-management';
 
 const ADMIN_EMAIL = 'f20240819@hyderabad.bits-pilani.ac.in';
 
@@ -63,10 +64,10 @@ export default function AdminPage() {
                  <Card>
                     <CardHeader>
                         <CardTitle>Whitelist Management</CardTitle>
-                        <CardDescription>This feature is best managed in the Firebase console for security.</CardDescription>
+                        <CardDescription>Control which email addresses are allowed to sign up.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm text-muted-foreground">To control who can sign up, you should use Firebase Authentication's native features or secure your database with Firestore Security Rules.</p>
+                        <WhitelistManagement />
                     </CardContent>
                 </Card>
             </div>

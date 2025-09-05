@@ -6,7 +6,7 @@ import React, {createContext, useContext, useState, useEffect, ReactNode} from '
 import {onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, type User as FirebaseUser} from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import type { User, UserRole } from '@/lib/types';
-import { createUserProfile, getUserProfile } from '@/services/firestore';
+import { createUserProfile, getUserProfile, isEmailWhitelisted } from '@/services/firestore';
 import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType {
@@ -22,6 +22,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const handleUnauthorizedAccess = async (email: string | null) => {
+    await signOut(auth);
+    toast({
+        variant: 'destructive',
+        title: 'Access Denied',
+        description: `The email ${email} is not authorized. Please contact an admin.`,
+        duration: 5000,
+    });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -29,22 +39,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      console.log("onAuthStateChanged triggered");
       try {
         if (fbUser) {
-          console.log("onAuthStateChanged: Firebase User found:", fbUser.uid, fbUser.email);
           setFirebaseUser(fbUser);
           
           let userProfile = await getUserProfile(fbUser.uid);
-          console.log("onAuthStateChanged: Fetched user profile:", userProfile);
 
           if (userProfile) {
             setUser(userProfile);
           } else {
-            console.log("onAuthStateChanged: No profile found for this user. Creating one.");
+             // This is a new user (or first-time login via Google)
+            const isWhitelisted = await isEmailWhitelisted(fbUser.email || '');
+
+            if (!isWhitelisted) {
+                await handleUnauthorizedAccess(fbUser.email);
+                return;
+            }
+
             const newUser: User = {
                 id: fbUser.uid,
-                name: fbUser.displayName || 'New User', // Name will be properly set on sign-up
+                name: fbUser.displayName || 'New User',
                 email: fbUser.email || '',
                 role: 'Associate', 
                 avatar: fbUser.photoURL || `https://i.pravatar.cc/150?u=${fbUser.uid}`,
@@ -54,7 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(newUser);
           }
         } else {
-          console.log("onAuthStateChanged: No Firebase User found.");
           setFirebaseUser(null);
           setUser(null);
         }
@@ -75,6 +88,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   
   const signUp = async (email: string, pass:string, name: string) => {
+    const isWhitelisted = await isEmailWhitelisted(email);
+    if (!isWhitelisted) {
+        toast({
+            variant: 'destructive',
+            title: 'Unauthorized Email',
+            description: 'This email is not on the whitelist. Please contact an administrator.',
+        });
+        throw new Error("Email not whitelisted");
+    }
+
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     const fbUser = userCredential.user;
 
