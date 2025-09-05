@@ -55,16 +55,10 @@ export const getUsers = async (status?: 'pending' | 'active' | 'not-pending-or-d
     } else if (status === 'active') {
         q = query(usersCollection, where('status', '==', 'active'));
     } else if (status === 'not-pending-or-declined') {
-        // Fetch users with status 'active' and those without a status field.
         const activeQuery = query(usersCollection, where('status', '==', 'active'));
-        const noStatusQuery = query(usersCollection, where('status', '==', null)); // This won't work for non-existent fields.
+        const allUsersSnapshot = await getDocs(query(usersCollection));
+        const activeUsers = (await getDocs(activeQuery)).docs.map(doc => doc.data() as User);
         
-        const [activeSnapshot, allUsersSnapshot] = await Promise.all([
-            getDocs(activeQuery),
-            getDocs(query(usersCollection))
-        ]);
-        
-        const activeUsers = activeSnapshot.docs.map(doc => doc.data() as User);
         const noStatusUsers = allUsersSnapshot.docs
             .map(doc => doc.data() as User)
             .filter(user => user.status === undefined);
@@ -80,6 +74,22 @@ export const getUsers = async (status?: 'pending' | 'active' | 'not-pending-or-d
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => doc.data() as User);
 }
+
+// Debar a user - adds them to blacklist and sets status to declined
+export const debarUser = async (user: User): Promise<void> => {
+    const batch = writeBatch(db);
+    
+    // 1. Add email to blacklist
+    const blacklistRef = doc(db, 'blacklist', user.email.toLowerCase());
+    batch.set(blacklistRef, { email: user.email.toLowerCase(), createdAt: new Date().toISOString() });
+
+    // 2. Update user status to 'declined'
+    const userRef = doc(db, 'users', user.id);
+    batch.update(userRef, { status: 'declined' });
+
+    await batch.commit();
+}
+
 
 // == BLACKLIST FUNCTIONS ==
 export const addEmailToBlacklist = async (email: string): Promise<void> => {

@@ -3,39 +3,42 @@
 
 import { useState, useEffect } from 'react';
 import type { User, UserRole } from '@/lib/types';
-import { getUsers, updateUserProfile } from '@/services/firestore';
+import { getUsers, updateUserProfile, debarUser } from '@/services/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { UserX } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 export function UserManagementTable() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const fetchUsers = async () => {
+    try {
+      const fetchedUsers = await getUsers('not-pending-or-declined');
+      setUsers(fetchedUsers);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      toast({
+          variant: 'destructive',
+          title: 'Failed to load users',
+          description: 'Could not retrieve the user list from the database.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        // Fetch users whose status is not 'pending' or 'declined'
-        const fetchedUsers = await getUsers('not-pending-or-declined');
-        setUsers(fetchedUsers);
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Failed to load users',
-            description: 'Could not retrieve the user list from the database.'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchUsers();
-  }, [toast]);
+  }, []);
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
@@ -56,6 +59,24 @@ export function UserManagementTable() {
         description: 'An unexpected error occurred.',
       });
       console.error('Failed to update role:', error);
+    }
+  };
+
+  const handleDebarUser = async (user: User) => {
+    try {
+        await debarUser(user);
+        toast({
+            title: 'User Debarred',
+            description: `${user.name} has been blacklisted and their access has been revoked.`
+        });
+        fetchUsers(); // Refresh the user list
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Error Debarring User',
+            description: 'An unexpected error occurred.',
+        });
+        console.error('Failed to debar user:', error);
     }
   };
 
@@ -81,7 +102,8 @@ export function UserManagementTable() {
             <TableHead>User</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Current Role</TableHead>
-            <TableHead className="text-right">Change Role</TableHead>
+            <TableHead>Change Role</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -102,12 +124,12 @@ export function UserManagementTable() {
                   {user.role}
                 </Badge>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell>
                 <Select
                   value={user.role}
                   onValueChange={(value: UserRole) => handleRoleChange(user.id, value)}
                 >
-                  <SelectTrigger className="w-32 ml-auto">
+                  <SelectTrigger className="w-32">
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -116,6 +138,30 @@ export function UserManagementTable() {
                     <SelectItem value="SPT">SPT</SelectItem>
                   </SelectContent>
                 </Select>
+              </TableCell>
+              <TableCell className="text-right">
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm">
+                            <UserX className="h-4 w-4 mr-2" />
+                            Debar
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure you want to debar this user?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will add <strong className="text-foreground">{user.name} ({user.email})</strong> to the blacklist and immediately revoke their access. This action cannot be easily undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDebarUser(user)}>
+                                Yes, Debar User
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
               </TableCell>
             </TableRow>
           ))}
