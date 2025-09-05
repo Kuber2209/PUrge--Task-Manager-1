@@ -3,7 +3,7 @@
 
 import { cn } from '@/lib/utils';
 import { UploadCloud, File as FileIcon, X } from 'lucide-react';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { useDropzone, type DropzoneOptions } from 'react-dropzone';
 import { Button } from './button';
 import { Input } from './input';
@@ -22,20 +22,19 @@ export function FileUploader({
   dropzoneOptions,
   className,
 }: FileUploaderProps) {
-  const [files, setFiles] = React.useState<File[]>(value || []);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
-      const newFiles = [...files, ...acceptedFiles];
-      setFiles(newFiles);
+      // Combines the current files with the new ones.
+      const newFiles = [...(value || []), ...acceptedFiles];
       onValueChange(newFiles);
     },
-    [files, onValueChange]
+    [value, onValueChange]
   );
 
   const removeFile = (index: number) => {
-    const newFiles = files.filter((_, i) => i !== index);
-    setFiles(newFiles);
+    if (!value) return;
+    const newFiles = value.filter((_, i) => i !== index);
     onValueChange(newFiles);
   };
 
@@ -61,11 +60,11 @@ export function FileUploader({
         <Input {...getInputProps()} />
       </div>
 
-      {files.length > 0 && (
+      {(value || []).length > 0 && (
         <div className="space-y-2">
             <h4 className="font-medium text-sm">Selected Files:</h4>
             <div className="grid gap-2">
-            {files.map((file, index) => (
+            {value.map((file, index) => (
                 <div key={file.name + index} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
                     <div className="flex items-center gap-2">
                         <FileIcon className="w-4 h-4 text-muted-foreground" />
