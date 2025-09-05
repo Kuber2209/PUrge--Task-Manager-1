@@ -19,7 +19,9 @@ export function JptDashboard() {
     if (!currentUser) return;
 
     const unsubscribe = getTasksCreatedByUser(currentUser.id, (postedTasks) => {
-      setTasks(postedTasks);
+      // Filter out completed tasks
+      const activeTasks = postedTasks.filter(task => task.status !== 'Completed');
+      setTasks(activeTasks);
       // Also fetch all users for avatar display in tasks
       getUsers().then(allUsers => {
         setUsers(allUsers);

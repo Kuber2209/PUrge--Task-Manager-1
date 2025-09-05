@@ -1,6 +1,5 @@
 
 
-
 import { db } from '@/lib/firebase';
 import type { User, Task, Announcement, AnnouncementAudience, Resource } from '@/lib/types';
 import {
@@ -179,7 +178,7 @@ export const getOpenTasks = (callback: (tasks: Task[]) => void): (() => void) =>
 // Get all ongoing tasks with real-time updates
 export const getOngoingTasks = (callback: (tasks: Task[]) => void): (() => void) => {
     const tasksCollection = collection(db, 'tasks');
-    const q = query(tasksCollection, where('status', '==', 'In Progress'));
+    const q = query(tasksCollection, where('status', 'in', ['Open', 'In Progress']));
     return onSnapshot(q, (querySnapshot) => {
         const tasks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
         tasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -191,7 +190,14 @@ export const getOngoingTasks = (callback: (tasks: Task[]) => void): (() => void)
 // Update a task
 export const updateTask = async (taskId: string, updates: Partial<Task>): Promise<void> => {
   const taskRef = doc(db, 'tasks', taskId);
-  await updateDoc(taskRef, updates);
+  const { ...updateData } = updates;
+  if(updateData.completedAt === undefined) {
+    // Firestore does not allow `undefined` values.
+    // If we are un-completing, we need to remove the field.
+    // To do this with updateDoc, we can pass it to the object and then delete it.
+    delete updateData.completedAt;
+  }
+  await updateDoc(taskRef, updateData);
 };
 
 // Delete a task
