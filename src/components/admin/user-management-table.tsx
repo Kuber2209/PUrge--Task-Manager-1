@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UserX, MoreVertical } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -102,8 +101,7 @@ export function UserManagementTable() {
           <TableRow>
             <TableHead>User</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Current Role</TableHead>
-            <TableHead>Change Role</TableHead>
+            <TableHead>Role</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -120,11 +118,6 @@ export function UserManagementTable() {
                 </div>
               </TableCell>
               <TableCell className="text-muted-foreground">{user.email}</TableCell>
-              <TableCell>
-                <Badge variant={user.role === 'SPT' ? 'default' : user.role === 'JPT' ? 'secondary' : 'outline'}>
-                  {user.role}
-                </Badge>
-              </TableCell>
               <TableCell>
                 <Select
                   value={user.role}
