@@ -100,7 +100,7 @@ export function Dashboard() {
         <Tabs defaultValue={defaultTab} className="w-full flex flex-col" key={tabsKey}>
            <div className='px-4 md:px-8 bg-header border-b border-border'>
              <div className="max-w-7xl mx-auto">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-8">
+                <TabsList className="flex flex-wrap h-auto">
                     <TabsTrigger value="announcements">Announcements</TabsTrigger>
                     <TabsTrigger value="resources">Resources</TabsTrigger>
                     <TabsTrigger value="calendar">Calendar</TabsTrigger>

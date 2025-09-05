@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Link2, Plus, Loader2, MoreVertical, Edit, Trash2, FileText, Download, Send, MessageSquare, BookMarked } from 'lucide-react';
+import { Link2, Plus, Loader2, MoreVertical, Edit, Trash2, FileText, Download, Send, MessageSquare, BookMarked, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { createResource, getResources, getUsers, updateResource, deleteResource } from '@/services/firestore';
 import { uploadFile } from '@/services/storage';
@@ -25,6 +25,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { FileUploader } from '../ui/file-uploader';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
+import { cn } from '@/lib/utils';
 
 
 export function Resources() {
@@ -114,96 +116,107 @@ function ResourceCard({ resource, users, currentUser, canManage }: { resource: R
     };
 
     return (
-        <Card className="transition-all hover:shadow-md">
-            <CardHeader>
-                <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                        <Avatar>
-                            <AvatarImage src={author?.avatar} alt={author?.name} />
-                            <AvatarFallback>{author?.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <CardTitle className="font-headline text-xl">{resource.title}</CardTitle>
-                            {author && <p className="text-sm text-muted-foreground">
-                                Added by {author?.name} ({author?.role}) - {formatDistanceToNow(new Date(resource.createdAt), { addSuffix: true })}
-                            </p>}
+        <Collapsible asChild>
+            <Card className="transition-all hover:shadow-md">
+                <CardHeader>
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-4">
+                            <Avatar>
+                                <AvatarImage src={author?.avatar} alt={author?.name} />
+                                <AvatarFallback>{author?.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <CardTitle className="font-headline text-xl">{resource.title}</CardTitle>
+                                {author && <p className="text-sm text-muted-foreground">
+                                    Added by {author?.name} ({author?.role}) - {formatDistanceToNow(new Date(resource.createdAt), { addSuffix: true })}
+                                </p>}
+                            </div>
+                        </div>
+                        <div className='flex items-center'>
+                             <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm" className="w-9 p-0 data-[state=open]:rotate-180 transition-transform">
+                                    <ChevronDown className="h-4 w-4" />
+                                    <span className="sr-only">Toggle</span>
+                                </Button>
+                            </CollapsibleTrigger>
+                            {canManage && <ResourceActions resource={resource} />}
                         </div>
                     </div>
-                    {canManage && <ResourceActions resource={resource} />}
-                </div>
-            </CardHeader>
-            <CardContent>
-                <p className="whitespace-pre-wrap">{resource.description}</p>
-                 {resource.link && (
-                    <Button variant="link" asChild className="p-0 h-auto mt-2">
-                        <a href={resource.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                            <Link2 className="w-4 h-4"/> <span>{resource.link}</span>
-                        </a>
-                    </Button>
-                )}
-            </CardContent>
-            {resource.document && (
-                <CardFooter className="pt-4 border-t">
-                    <div className="flex items-center justify-between text-sm hover:bg-muted/50 p-2 rounded-md w-full">
-                        <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-muted-foreground" />
-                            <span className="font-medium">{resource.document.name}</span>
+                </CardHeader>
+                <CollapsibleContent>
+                    <CardContent>
+                        {resource.description && <p className="whitespace-pre-wrap">{resource.description}</p>}
+                        
+                        <div className='flex items-center gap-4 mt-4'>
+                            {resource.link && (
+                                <Button variant="outline" size="sm" asChild>
+                                    <a href={resource.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                                        <Link2 className="w-4 h-4"/> <span>Open Link</span>
+                                    </a>
+                                </Button>
+                            )}
+                            {resource.document && (
+                                 <Button variant="outline" size="sm" asChild>
+                                    <a href={resource.document.url} download={resource.document.name} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                                        <Download className="w-4 h-4"/> <span>{resource.document.name}</span>
+                                    </a>
+                                </Button>
+                            )}
                         </div>
-                        <Button variant="ghost" size="sm" asChild>
-                            <a href={resource.document.url} download={resource.document.name} target="_blank" rel="noopener noreferrer"><Download className="w-4 h-4"/></a>
-                        </Button>
-                    </div>
-                </CardFooter>
-            )}
+                    </CardContent>
 
-             <Accordion type="single" collapsible className="w-full px-6 pb-4">
-                <AccordionItem value="comments" className="border-b-0">
-                    <AccordionTrigger>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <MessageSquare className="w-4 h-4" />
-                            <span>Comments ({resource.comments?.length || 0})</span>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="space-y-4 pt-4">
-                        <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
-                            {(resource.comments || []).map(comment => {
-                                const commenter = users.find(u => u.id === comment.userId);
-                                return (
-                                    <div key={comment.id} className="flex items-start gap-3">
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src={commenter?.avatar} />
-                                            <AvatarFallback>{commenter?.name.slice(0,2).toUpperCase()}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="bg-muted p-3 rounded-lg flex-1">
-                                            <div className="flex justify-between items-center">
-                                                <p className="text-xs font-bold">{commenter?.name}</p>
-                                                <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}</p>
-                                            </div>
-                                            <p className="text-sm mt-1">{comment.text}</p>
-                                        </div>
+                    <CardFooter className='pt-4'>
+                        <Accordion type="single" collapsible className="w-full border-t">
+                            <AccordionItem value="comments" className="border-b-0">
+                                <AccordionTrigger>
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <MessageSquare className="w-4 h-4" />
+                                        <span>Comments ({resource.comments?.length || 0})</span>
                                     </div>
-                                )
-                            })}
-                             {(!resource.comments || resource.comments.length === 0) && <p className="text-sm text-center text-muted-foreground py-4">No comments yet.</p>}
-                        </div>
-                        <div className="flex gap-2 items-center pt-4 border-t">
-                             <Input 
-                                placeholder="Add a comment..." 
-                                value={newComment}
-                                onChange={(e) => setNewComment(e.target.value)}
-                             />
-                             <Button onClick={handleAddComment} disabled={!newComment.trim()}><Send className="w-4 h-4" /></Button>
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
-        </Card>
+                                </AccordionTrigger>
+                                <AccordionContent className="space-y-4 pt-4">
+                                    <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
+                                        {(resource.comments || []).map(comment => {
+                                            const commenter = users.find(u => u.id === comment.userId);
+                                            return (
+                                                <div key={comment.id} className="flex items-start gap-3">
+                                                    <Avatar className="h-8 w-8">
+                                                        <AvatarImage src={commenter?.avatar} />
+                                                        <AvatarFallback>{commenter?.name.slice(0,2).toUpperCase()}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="bg-muted p-3 rounded-lg flex-1">
+                                                        <div className="flex justify-between items-center">
+                                                            <p className="text-xs font-bold">{commenter?.name}</p>
+                                                            <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}</p>
+                                                        </div>
+                                                        <p className="text-sm mt-1">{comment.text}</p>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                        {(!resource.comments || resource.comments.length === 0) && <p className="text-sm text-center text-muted-foreground py-4">No comments yet.</p>}
+                                    </div>
+                                    <div className="flex gap-2 items-center pt-4 border-t">
+                                        <Input 
+                                            placeholder="Add a comment..." 
+                                            value={newComment}
+                                            onChange={(e) => setNewComment(e.target.value)}
+                                        />
+                                        <Button onClick={handleAddComment} disabled={!newComment.trim()}><Send className="w-4 h-4" /></Button>
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Accordion>
+                    </CardFooter>
+                </CollapsibleContent>
+            </Card>
+        </Collapsible>
     )
 }
 
 const resourceSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters long.'),
-  description: z.string().min(10, 'Description must be at least 10 characters long.'),
+  description: z.string().optional(),
   link: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
   file: z.array(z.instanceof(File)).optional(),
   document: z.custom<Resource['document']>().optional(),
@@ -245,22 +258,26 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
     setUploading(true);
 
     try {
-        const finalData: Partial<Omit<Resource, 'id' | 'createdAt' | 'createdBy'>> = {
+        let finalData: Partial<Omit<Resource, 'id' | 'createdAt' | 'createdBy' | 'comments'>> = {
             title: data.title,
             description: data.description,
+            link: data.link || undefined,
         };
 
+        // If a new file is being uploaded, it takes precedence.
         if (data.file && data.file.length > 0) {
             const tempId = resource?.id || `temp_${Date.now()}`;
             const downloadURL = await uploadFile(data.file[0], `resources/${tempId}/`);
             finalData.document = { name: data.file[0].name, url: downloadURL };
-            finalData.link = undefined; // Prioritize document over link
-        } else if (data.link) {
-            finalData.link = data.link;
-            finalData.document = data.document; // Keep existing document if link is edited
+            finalData.link = undefined; // Ensure link is cleared if document is added
         } else {
-            // No new file and no link
-            finalData.document = data.document; // Keep existing if present
+             // If no new file, retain the existing document unless it's been cleared
+            finalData.document = data.document;
+        }
+
+        // If there's neither a new file nor an existing document, check for a link
+        if (!finalData.document) {
+            finalData.link = data.link || undefined;
         }
 
 
@@ -269,15 +286,14 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
             toast({ title: 'Resource Updated!' });
         } else {
             const newResourceData: Omit<Resource, 'id'> = {
-                ...finalData,
                 title: finalData.title!,
-                description: finalData.description!,
+                description: finalData.description,
+                link: finalData.link,
+                document: finalData.document,
                 createdBy: currentUser.id,
                 createdAt: new Date().toISOString(),
+                comments: [],
             };
-            // Explicitly remove undefined fields before sending to Firestore
-            if (newResourceData.document === undefined) delete newResourceData.document;
-            if (newResourceData.link === undefined) delete newResourceData.link;
             
             await createResource(newResourceData);
             toast({ title: 'Resource Posted!', description: `The resource "${data.title}" is now live.` });
@@ -317,7 +333,7 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
               {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">Description (Optional)</Label>
               <Textarea id="description" {...register('description')} />
               {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
             </div>
