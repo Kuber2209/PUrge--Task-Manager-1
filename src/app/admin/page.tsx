@@ -10,7 +10,8 @@ import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserManagementTable } from '@/components/admin/user-management-table';
 import { ApprovalQueue } from '@/components/admin/approval-queue';
-import { BlacklistManagement } from '@/components/admin/whitelist-management';
+import { BlacklistManagement } from '@/components/admin/blacklist-management';
+import { WhitelistManagement } from '@/components/admin/whitelist-management';
 
 const ADMIN_EMAIL = 'f20240819@hyderabad.bits-pilani.ac.in';
 
@@ -67,15 +68,26 @@ export default function AdminPage() {
                        <UserManagementTable />
                     </CardContent>
                 </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Email Blacklist Management</CardTitle>
-                        <CardDescription>Add or remove emails from the blacklist to block them from signing up.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <BlacklistManagement />
-                    </CardContent>
-                </Card>
+                 <div className="grid md:grid-cols-2 gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Email Whitelist Management</CardTitle>
+                            <CardDescription>Add emails to the whitelist for automatic approval.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <WhitelistManagement />
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Email Blacklist Management</CardTitle>
+                            <CardDescription>Add or remove emails from the blacklist to block them from signing up.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <BlacklistManagement />
+                        </CardContent>
+                    </Card>
+                 </div>
             </div>
         </div>
       </main>

@@ -6,7 +6,7 @@ import React, {createContext, useContext, useState, useEffect, ReactNode} from '
 import {onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, type User as FirebaseUser} from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import type { User, UserRole } from '@/lib/types';
-import { createUserProfile, getUserProfile, isEmailBlacklisted, addEmailToBlacklist } from '@/services/firestore';
+import { createUserProfile, getUserProfile, isEmailBlacklisted, isEmailWhitelisted } from '@/services/firestore';
 import { toast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
@@ -73,6 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return;
              }
 
+            const isWhitelisted = await isEmailWhitelisted(fbUser.email);
+
             const newUser: User = {
                 id: fbUser.uid,
                 name: fbUser.displayName || 'New User',
@@ -80,11 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 role: 'Associate', 
                 avatar: fbUser.photoURL || `https://i.pravatar.cc/150?u=${fbUser.uid}`,
                 isOnHoliday: false,
-                status: 'pending', // New users are pending approval
+                status: isWhitelisted ? 'active' : 'pending',
             };
             await createUserProfile(newUser);
             setUser(newUser);
-            router.push('/pending-approval'); // Redirect new users to pending page
+            
+            if (newUser.status === 'pending') {
+                router.push('/pending-approval');
+            }
           }
         } else {
           setFirebaseUser(null);
@@ -125,19 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-    const fbUser = userCredential.user;
-
-    const newUser: User = {
-        id: fbUser.uid,
-        name: name,
-        email: fbUser.email || '',
-        role: 'Associate',
-        avatar: `https://i.pravatar.cc/150?u=${fbUser.uid}`,
-        isOnHoliday: false,
-        status: 'pending'
-    };
-    await createUserProfile(newUser);
-    setUser(newUser);
+    // onAuthStateChanged will handle the rest of the profile creation and redirection
   };
 
   const signInWithGoogle = async () => {

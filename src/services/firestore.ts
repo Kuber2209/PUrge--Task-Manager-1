@@ -97,6 +97,7 @@ export const getBlacklist = (callback: (emails: { id: string, email: string }[])
 
 // Add an email to the whitelist
 export const addEmailToWhitelist = async (email: string): Promise<void> => {
+    if (!email) return;
     const whitelistRef = doc(db, 'whitelist', email.toLowerCase());
     await setDoc(whitelistRef, { email: email.toLowerCase(), createdAt: new Date().toISOString() });
 };

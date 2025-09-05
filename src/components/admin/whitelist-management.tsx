@@ -8,64 +8,64 @@ import { z } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { addEmailToBlacklist, removeEmailFromBlacklist, getBlacklist } from '@/services/firestore';
+import { addEmailToWhitelist, removeEmailFromWhitelist, getWhitelist } from '@/services/firestore';
 import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 
-const blacklistSchema = z.object({
+const whitelistSchema = z.object({
   email: z.string().email('Please enter a valid email address.'),
 });
 
-type BlacklistFormData = z.infer<typeof blacklistSchema>;
+type WhitelistFormData = z.infer<typeof whitelistSchema>;
 
-export function BlacklistManagement() {
-  const [blacklistedEmails, setBlacklistedEmails] = useState<{ id: string, email: string }[]>([]);
+export function WhitelistManagement() {
+  const [whitelistedEmails, setWhitelistedEmails] = useState<{ id: string, email: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<BlacklistFormData>({
-    resolver: zodResolver(blacklistSchema),
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<WhitelistFormData>({
+    resolver: zodResolver(whitelistSchema),
   });
 
   useEffect(() => {
-    const unsubscribe = getBlacklist((emails) => {
-      setBlacklistedEmails(emails);
+    const unsubscribe = getWhitelist((emails) => {
+      setWhitelistedEmails(emails);
       setLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  const handleAddEmail = async (data: BlacklistFormData) => {
+  const handleAddEmail = async (data: WhitelistFormData) => {
     try {
-      await addEmailToBlacklist(data.email);
+      await addEmailToWhitelist(data.email);
       toast({
-        title: 'Email Blacklisted',
-        description: `${data.email} has been added to the blacklist.`,
+        title: 'Email Whitelisted',
+        description: `${data.email} has been added to the whitelist.`,
       });
       reset();
     } catch (error) {
-      console.error('Failed to add email to blacklist:', error);
+      console.error('Failed to add email to whitelist:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to add email to the blacklist.',
+        description: 'Failed to add email to the whitelist.',
       });
     }
   };
 
   const handleRemoveEmail = async (email: string) => {
     try {
-      await removeEmailFromBlacklist(email);
+      await removeEmailFromWhitelist(email);
       toast({
         title: 'Email Removed',
-        description: `${email} has been removed from the blacklist.`,
+        description: `${email} has been removed from the whitelist.`,
       });
     } catch (error) {
-      console.error('Failed to remove email from blacklist:', error);
+      console.error('Failed to remove email from whitelist:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to remove email from the blacklist.',
+        description: 'Failed to remove email from the whitelist.',
       });
     }
   };
@@ -92,7 +92,7 @@ export function BlacklistManagement() {
           <Input 
             id="email" 
             type="email" 
-            placeholder="Enter email to blacklist" 
+            placeholder="Enter email to whitelist" 
             {...register('email')}
           />
           {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
@@ -104,10 +104,10 @@ export function BlacklistManagement() {
       </form>
 
       <div className="space-y-2">
-        <h4 className="font-medium text-sm text-muted-foreground">Blacklisted Emails ({blacklistedEmails.length})</h4>
-        {blacklistedEmails.length > 0 ? (
-          <ul className="border rounded-md">
-            {blacklistedEmails.map(({ id, email }) => (
+        <h4 className="font-medium text-sm text-muted-foreground">Whitelisted Emails ({whitelistedEmails.length})</h4>
+        {whitelistedEmails.length > 0 ? (
+          <ul className="border rounded-md max-h-60 overflow-y-auto">
+            {whitelistedEmails.map(({ id, email }) => (
               <li key={id} className="flex items-center justify-between p-3 border-b last:border-b-0">
                 <span className="font-mono text-sm">{email}</span>
                 <Button 
@@ -123,7 +123,7 @@ export function BlacklistManagement() {
           </ul>
         ) : (
             <div className="text-center text-sm text-muted-foreground py-8">
-                The blacklist is empty.
+                The whitelist is empty.
             </div>
         )}
       </div>
