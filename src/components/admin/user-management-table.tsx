@@ -11,8 +11,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { UserX } from 'lucide-react';
+import { UserX, MoreVertical } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 
 export function UserManagementTable() {
@@ -141,12 +142,21 @@ export function UserManagementTable() {
               </TableCell>
               <TableCell className="text-right">
                 <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">
-                            <UserX className="h-4 w-4 mr-2" />
-                            Debar
-                        </Button>
-                    </AlertDialogTrigger>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <AlertDialogTrigger asChild>
+                                <DropdownMenuItem className="text-destructive">
+                                    <UserX className="h-4 w-4 mr-2" />
+                                    Debar User
+                                </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure you want to debar this user?</AlertDialogTitle>
@@ -156,7 +166,7 @@ export function UserManagementTable() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDebarUser(user)}>
+                            <AlertDialogAction onClick={() => handleDebarUser(user)} className="bg-destructive hover:bg-destructive/90">
                                 Yes, Debar User
                             </AlertDialogAction>
                         </AlertDialogFooter>
