@@ -7,9 +7,9 @@ import { getUsers, updateUserProfile } from '@/services/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Skeleton } from '../ui/skeleton';
-import { Badge } from '../ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
 export function UserManagementTable() {
   const [users, setUsers] = useState<User[]>([]);
@@ -23,7 +23,7 @@ export function UserManagementTable() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleRoleChange = async (userId: string, newRole: UserRole) => {
+  async function handleRoleChange(userId: string, newRole: UserRole) {
     try {
       await updateUserProfile(userId, { role: newRole });
       setUsers(prevUsers =>
@@ -43,7 +43,7 @@ export function UserManagementTable() {
       });
       console.error('Failed to update role:', error);
     }
-  };
+  }
 
   if (loading) {
     return (
