@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,11 +16,24 @@ export function UserManagementTable() {
   const { toast } = useToast();
 
   useEffect(() => {
-    setLoading(true);
-    getUsers()
-      .then(setUsers)
-      .finally(() => setLoading(false));
-  }, []);
+    const fetchUsers = async () => {
+      try {
+        const fetchedUsers = await getUsers();
+        setUsers(fetchedUsers);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Failed to load users',
+            description: 'Could not retrieve the user list from the database.'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUsers();
+  }, [toast]);
 
   async function handleRoleChange(userId: string, newRole: UserRole) {
     try {
@@ -82,7 +94,7 @@ export function UserManagementTable() {
               <TableCell>
                 <Badge variant={user.role === 'SPT' ? 'default' : user.role === 'JPT' ? 'secondary' : 'outline'}>
                   {user.role}
-                </badge>
+                </Badge>
               </TableCell>
               <TableCell className="text-right">
                 <Select
