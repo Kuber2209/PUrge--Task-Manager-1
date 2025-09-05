@@ -286,17 +286,25 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
           deadlineISO = date.toISOString();
       }
       
-      const finalData = { ...data, documents: uploadedDocuments };
+      const finalData: Partial<Task> = {
+          ...data,
+          deadline: deadlineISO,
+          documents: uploadedDocuments,
+          assignableTo: data.assignableTo as AssignableRole[],
+      };
+      
+      delete (finalData as any).files;
+      delete (finalData as any).deadlineTime;
+
+      if (!finalData.assignableTo.includes('JPT')) {
+          delete finalData.requiredJpts;
+      }
+      if (!finalData.assignableTo.includes('Associate')) {
+          delete finalData.requiredAssociates;
+      }
 
       if (isEdit && task) {
-          const updatedTaskData: Partial<Task> = {
-              ...finalData,
-              deadline: deadlineISO,
-              assignableTo: data.assignableTo as AssignableRole[],
-              assignedTo: data.assignedTo || [],
-          };
-          delete (updatedTaskData as any).files;
-          await updateTask(task.id, updatedTaskData);
+          await updateTask(task.id, finalData);
           toast({ title: 'Task Updated!' });
       } else {
           const newTaskData: Omit<Task, 'id'> = {
@@ -318,12 +326,11 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
           if (data.assignableTo.includes('JPT')) {
               newTaskData.requiredJpts = data.requiredJpts;
           }
-          
           if (data.assignableTo.includes('Associate')) {
               newTaskData.requiredAssociates = data.requiredAssociates;
           }
           
-          const newTask = await createTask(newTaskData);
+          await createTask(newTaskData);
 
           toast({
             title: 'Task Created!',
@@ -331,6 +338,7 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
           });
       }
     } catch (err) {
+      console.error("Failed to save task:", err);
       toast({variant: 'destructive', title: "An Error Occurred", description: "Could not save the task."});
     } finally {
         setIsUploading(false);
