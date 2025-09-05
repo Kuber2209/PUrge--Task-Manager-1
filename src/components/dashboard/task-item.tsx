@@ -43,14 +43,8 @@ export function TaskItem({ task, users, onTaskUpdate }: TaskItemProps) {
     if (!currentUser) return;
     const newAssignedTo = [...task.assignedTo, currentUser.id];
     
-    const assignedJpts = assignedUsers.filter(u => u.role === 'JPT').length + (currentUser.role === 'JPT' ? 1 : 0);
-    const assignedAssociates = assignedUsers.filter(u => u.role === 'Associate').length + (currentUser.role === 'Associate' ? 1 : 0);
-    
-    const isFullyStaffed = 
-      (!task.requiredJpts || assignedJpts >= task.requiredJpts) &&
-      (!task.requiredAssociates || assignedAssociates >= task.requiredAssociates);
-
-    const newStatus = isFullyStaffed ? 'In Progress' : task.status;
+    // Change status to "In Progress" as soon as one person accepts
+    const newStatus = 'In Progress';
     
     const updatedTaskData = { status: newStatus, assignedTo: newAssignedTo };
     
@@ -89,7 +83,7 @@ export function TaskItem({ task, users, onTaskUpdate }: TaskItemProps) {
     return false;
   }, [task, currentUser, isUserAssigned, isAssignable, assignedRolesCount]);
 
-  const canComplete = task.status === 'In Progress' && isUserAssigned;
+  const canComplete = (task.status === 'In Progress' || task.status === 'Open') && isUserAssigned;
   const isCreator = task.createdBy === currentUser.id;
   const canViewDetails = true; // Everyone can view details now
   const canManage = currentUser.role === 'SPT' || (currentUser.role === 'JPT' && isCreator);

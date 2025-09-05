@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, User as UserIcon, Calendar, Tag, Users, Check, Send, Clock, Upload, Download, Replace, FileText, Globe, MessageSquareQuote, X, Mic, Square, Pause } from 'lucide-react';
+import { ArrowLeft, User as UserIcon, Calendar, Tag, Users, Check, Send, Clock, Upload, Download, Replace, FileText, Globe, MessageSquareQuote, X, Mic, Square, Pause, Undo2 } from 'lucide-react';
 import type { Task, User, Message, Document } from '@/lib/types';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
@@ -167,9 +167,15 @@ export default function TaskDetailPage() {
     await onTaskUpdate({ status: 'Completed', completedAt: new Date().toISOString() });
     toast({ title: 'Task Marked as Complete!', description: 'Great job!'});
   };
+
+  const handleUnmarkComplete = async () => {
+    await onTaskUpdate({ status: 'In Progress', completedAt: undefined });
+    toast({ title: 'Task Re-opened!', description: 'The task has been moved back to "In Progress".'});
+  }
   
   const isUserAssigned = task.assignedTo.includes(currentUser.id);
-  const canComplete = task.status === 'In Progress' && isUserAssigned;
+  const canComplete = (task.status === 'In Progress' || task.status === 'Open') && isUserAssigned;
+  const canUnmarkComplete = task.status === 'Completed' && (currentUser.role === 'SPT' || currentUser.role === 'JPT');
   const canTransfer = currentUser.role === 'Associate' && task.status === 'In Progress' && isUserAssigned;
 
   const assignedJptsCount = assignedUsers.filter(a => a.role === 'JPT').length;
@@ -367,6 +373,21 @@ export default function TaskDetailPage() {
                     </CardFooter>
                   </Card>
                 )}
+                 {canUnmarkComplete && (
+                    <Card>
+                      <CardHeader>
+                          <CardTitle>Re-Open Task</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                          <p className="text-sm text-muted-foreground">This task was marked complete. You can revert it to "In Progress".</p>
+                      </CardContent>
+                      <CardFooter>
+                          <Button className="w-full" variant="secondary" onClick={handleUnmarkComplete}>
+                              <Undo2 className="mr-2 h-4 w-4" /> Unmark as Complete
+                          </Button>
+                      </CardFooter>
+                    </Card>
+                  )}
                  {canTransfer && (
                     <TransferTaskCard task={task} currentUser={currentUser} onTaskUpdate={onTaskUpdate}/>
                  )}
@@ -642,7 +663,7 @@ function TransferTaskCard({ task, currentUser, onTaskUpdate }: { task: Task; cur
 
     useEffect(() => {
         getUsers().then(allUsers => {
-            const unassignedAssociates = allUsers.filter(u => u.role === 'Associate' && u.id !== currentUser.id && !task.assignedTo.includes(u.id));
+            const unassignedAssociates = allUsers.filter(u => u.role === 'Associate' && u.id !== currentUser.id && !task.assignedTo.includes(u.id) && !u.isOnHoliday);
             setOtherAssociates(unassignedAssociates);
         });
     }, [task, currentUser.id]);
@@ -662,6 +683,7 @@ function TransferTaskCard({ task, currentUser, onTaskUpdate }: { task: Task; cur
         toast({ title: 'Task Transferred Successfully!' });
         setOpen(false);
         setSelectedAssociate('');
+        router.push('/dashboard');
     };
 
     const handleOpenToAll = async () => {
