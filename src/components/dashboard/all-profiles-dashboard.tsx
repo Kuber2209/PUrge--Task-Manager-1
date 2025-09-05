@@ -6,10 +6,11 @@ import type { User, Task } from '@/lib/types';
 import { getUsers, getTasks } from '@/services/firestore';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Skeleton } from '../ui/skeleton';
+import { Input } from '../ui/input';
 
 interface AllProfilesDashboardProps {
   currentUser: User;
@@ -28,6 +29,7 @@ export function AllProfilesDashboard({ currentUser }: AllProfilesDashboardProps)
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -43,14 +45,22 @@ export function AllProfilesDashboard({ currentUser }: AllProfilesDashboardProps)
   }, []);
 
   const profilesToDisplay = useMemo(() => {
+    let baseProfiles = [];
     if (currentUser.role === 'SPT') {
-      return allUsers.filter(user => user.role === 'JPT' || user.role === 'Associate');
+      baseProfiles = allUsers.filter(user => user.role === 'JPT' || user.role === 'Associate');
+    } else if (currentUser.role === 'JPT') {
+      baseProfiles = allUsers.filter(user => user.role === 'Associate');
     }
-    if (currentUser.role === 'JPT') {
-      return allUsers.filter(user => user.role === 'Associate');
+
+    if (!searchTerm) {
+        return baseProfiles;
     }
-    return [];
-  }, [currentUser.role, allUsers]);
+
+    return baseProfiles.filter(user => 
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [currentUser.role, allUsers, searchTerm]);
   
   if (currentUser.role === 'Associate') {
     return (
@@ -65,6 +75,7 @@ export function AllProfilesDashboard({ currentUser }: AllProfilesDashboardProps)
       return (
           <div>
             <Skeleton className="h-8 w-64 mb-4" />
+            <Skeleton className="h-12 w-full mb-6" />
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 <Skeleton className="h-80 w-full" />
                 <Skeleton className="h-80 w-full" />
@@ -77,11 +88,25 @@ export function AllProfilesDashboard({ currentUser }: AllProfilesDashboardProps)
   return (
     <div>
       <h2 className="text-2xl font-bold font-headline tracking-tight mb-4">Team Task Logs</h2>
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input 
+            placeholder="Search by name or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+        />
+      </div>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {profilesToDisplay.map((user, index) => (
           <UserProfile key={user.id} user={user} allTasks={allTasks} index={index} />
         ))}
       </div>
+       {profilesToDisplay.length === 0 && !loading && (
+        <div className="text-center col-span-full py-16">
+            <p className="text-muted-foreground">No users found matching your search.</p>
+        </div>
+       )}
     </div>
   );
 }

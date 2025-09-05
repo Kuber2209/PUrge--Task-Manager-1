@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
@@ -16,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Link2, Plus, Loader2, MoreVertical, Edit, Trash2, FileText, Download, Send, MessageSquare, BookMarked, ChevronDown } from 'lucide-react';
+import { Link2, Plus, Loader2, MoreVertical, Edit, Trash2, FileText, Download, Send, MessageSquare, BookMarked, ChevronDown, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { createResource, getResources, getUsers, updateResource, deleteResource } from '@/services/firestore';
 import { uploadFile } from '@/services/storage';
@@ -34,6 +33,7 @@ export function Resources() {
     const [resources, setResources] = useState<Resource[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         setLoading(true);
@@ -48,6 +48,14 @@ export function Resources() {
 
         return () => unsubscribe();
     }, [currentUser]);
+
+    const filteredResources = useMemo(() => {
+        if (!searchTerm) return resources;
+        return resources.filter(resource =>
+            resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            resource.description.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [resources, searchTerm]);
     
     if (!currentUser) return null;
 
@@ -60,6 +68,7 @@ export function Resources() {
                     <Skeleton className="h-8 w-64" />
                     {canManage && <Skeleton className="h-10 w-44" />}
                 </div>
+                 <Skeleton className="h-12 w-full mb-6" />
                 <div className="space-y-6">
                     <Skeleton className="h-48 w-full" />
                     <Skeleton className="h-48 w-full" />
@@ -78,10 +87,25 @@ export function Resources() {
                 {canManage && <CreateResourceForm />}
             </div>
 
-            <div className="space-y-6 mt-6">
-                {resources.map(resource => (
+            <div className="relative my-6">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search resources by title or description..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                />
+            </div>
+
+            <div className="space-y-6">
+                {filteredResources.map(resource => (
                     <ResourceCard key={resource.id} resource={resource} users={users} currentUser={currentUser} canManage={canManage} />
                 ))}
+                {resources.length > 0 && filteredResources.length === 0 && (
+                    <div className="text-center col-span-full py-16">
+                        <p className="text-muted-foreground">No resources found matching your search.</p>
+                    </div>
+                )}
                 {resources.length === 0 && !loading && (
                     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed shadow-sm h-40 bg-card">
                         <BookMarked className="w-10 h-10 text-muted-foreground" />
