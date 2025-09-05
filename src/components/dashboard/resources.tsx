@@ -245,22 +245,24 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
     setUploading(true);
 
     try {
-        let resourceDocument = data.document;
+        const finalData: Partial<Omit<Resource, 'id' | 'createdAt' | 'createdBy'>> = {
+            title: data.title,
+            description: data.description,
+        };
 
-        // If a new file is uploaded, it takes precedence over the link.
         if (data.file && data.file.length > 0) {
             const tempId = resource?.id || `temp_${Date.now()}`;
             const downloadURL = await uploadFile(data.file[0], `resources/${tempId}/`);
-            resourceDocument = { name: data.file[0].name, url: downloadURL };
+            finalData.document = { name: data.file[0].name, url: downloadURL };
+            finalData.link = undefined; // Prioritize document over link
+        } else if (data.link) {
+            finalData.link = data.link;
+            finalData.document = data.document; // Keep existing document if link is edited
+        } else {
+            // No new file and no link
+            finalData.document = data.document; // Keep existing if present
         }
 
-        const finalData = { 
-            title: data.title,
-            description: data.description,
-            // If there's a document, don't save the link.
-            link: resourceDocument ? undefined : data.link,
-            document: resourceDocument 
-        };
 
         if(isEdit && resource) {
             await updateResource(resource.id, finalData);
@@ -268,9 +270,15 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
         } else {
             const newResourceData: Omit<Resource, 'id'> = {
                 ...finalData,
+                title: finalData.title!,
+                description: finalData.description!,
                 createdBy: currentUser.id,
                 createdAt: new Date().toISOString(),
             };
+            // Explicitly remove undefined fields before sending to Firestore
+            if (newResourceData.document === undefined) delete newResourceData.document;
+            if (newResourceData.link === undefined) delete newResourceData.link;
+            
             await createResource(newResourceData);
             toast({ title: 'Resource Posted!', description: `The resource "${data.title}" is now live.` });
         }
@@ -424,3 +432,6 @@ function ResourceActions({ resource }: { resource: Resource }) {
     )
 }
 
+
+
+    
