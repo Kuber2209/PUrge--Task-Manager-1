@@ -49,17 +49,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(userProfile);
           } else {
              // This is a new user (or first-time login via Google)
-            const isWhitelisted = await isEmailWhitelisted(fbUser.email || '');
+             if (!fbUser.email) {
+                // If email is not available yet, don't proceed. Auth state will change again.
+                setLoading(false);
+                return;
+             }
+            const isWhitelisted = await isEmailWhitelisted(fbUser.email);
 
             if (!isWhitelisted) {
                 await handleUnauthorizedAccess(fbUser.email);
+                setLoading(false); // Ensure loading is false before exiting
                 return;
             }
 
             const newUser: User = {
                 id: fbUser.uid,
                 name: fbUser.displayName || 'New User',
-                email: fbUser.email || '',
+                email: fbUser.email,
                 role: 'Associate', 
                 avatar: fbUser.photoURL || `https://i.pravatar.cc/150?u=${fbUser.uid}`,
                 isOnHoliday: false,
