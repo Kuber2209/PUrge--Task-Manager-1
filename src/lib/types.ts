@@ -55,7 +55,10 @@ export interface Resource {
     id: string;
     title: string;
     description: string;
-    link?: string;
+    link?: {
+        name: string;
+        url: string;
+    };
     document?: {
         name: string;
         url: string;

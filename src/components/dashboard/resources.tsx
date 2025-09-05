@@ -150,8 +150,8 @@ function ResourceCard({ resource, users, currentUser, canManage }: { resource: R
                         <div className='flex items-center gap-4 mt-4'>
                             {resource.link && (
                                 <Button variant="outline" size="sm" asChild>
-                                    <a href={resource.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                                        <Link2 className="w-4 h-4"/> <span>Open Link</span>
+                                    <a href={resource.link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                                        <Link2 className="w-4 h-4"/> <span>{resource.link.name}</span>
                                     </a>
                                 </Button>
                             )}
@@ -217,7 +217,8 @@ function ResourceCard({ resource, users, currentUser, canManage }: { resource: R
 const resourceSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters long.'),
   description: z.string().optional(),
-  link: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
+  linkUrl: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
+  linkName: z.string().optional(),
   file: z.array(z.instanceof(File)).optional(),
   document: z.custom<Resource['document']>().optional(),
 });
@@ -240,18 +241,19 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isSubmitting }, reset } = useForm<ResourceFormData>({
     resolver: zodResolver(resourceSchema),
-    defaultValues: { title: '', description: '', link: '', file: [], document: undefined },
+    defaultValues: { title: '', description: '', linkUrl: '', linkName: '', file: [], document: undefined },
   });
 
   useEffect(() => {
     if (isEdit && resource) {
-      reset({ title: resource.title, description: resource.description, link: resource.link, file: [], document: resource.document });
+      reset({ title: resource.title, description: resource.description, linkUrl: resource.link?.url, linkName: resource.link?.name, file: [], document: resource.document });
     } else {
-      reset({ title: '', description: '', link: '', file: [], document: undefined });
+      reset({ title: '', description: '', linkUrl: '', linkName: '', file: [], document: undefined });
     }
   }, [isEdit, resource, reset]);
 
   const file = watch('file')?.[0];
+  const linkUrl = watch('linkUrl');
   
   const onSubmit = async (data: ResourceFormData) => {
     if (!currentUser) return;
@@ -260,8 +262,9 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
     try {
         const finalData: Partial<Omit<Resource, 'id' | 'createdAt' | 'createdBy' | 'comments'>> = {
             title: data.title,
-            description: data.description,
         };
+
+        if (data.description) finalData.description = data.description;
 
         if (data.file && data.file.length > 0) {
             const tempId = resource?.id || `temp_${Date.now()}`;
@@ -271,8 +274,8 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
             finalData.document = data.document;
         }
 
-        if (data.link) {
-            finalData.link = data.link;
+        if (data.linkUrl) {
+            finalData.link = { url: data.linkUrl, name: data.linkName || data.linkUrl };
         }
 
         if(isEdit && resource) {
@@ -281,12 +284,12 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
         } else {
             const newResourceData: Omit<Resource, 'id'> = {
                 title: finalData.title!,
-                description: finalData.description,
                 createdBy: currentUser.id,
                 createdAt: new Date().toISOString(),
                 comments: [],
             };
 
+            if (finalData.description) newResourceData.description = finalData.description;
             if (finalData.link) newResourceData.link = finalData.link;
             if (finalData.document) newResourceData.document = finalData.document;
             
@@ -294,7 +297,7 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
             toast({ title: 'Resource Posted!', description: `The resource "${data.title}" is now live.` });
         }
         handleOpenChange(false);
-        reset({ title: '', description: '', link: '', file: [], document: undefined });
+        reset({ title: '', description: '', linkUrl: '', linkName: '', file: [], document: undefined });
 
     } catch (err) {
          console.error("Failed to save resource:", err);
@@ -333,10 +336,16 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
               {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
             </div>
              <div className="space-y-2">
-              <Label htmlFor="link">Link (Optional)</Label>
-              <Input id="link" {...register('link')} placeholder="https://example.com" disabled={!!file} />
-              {errors.link && <p className="text-sm text-destructive">{errors.link.message}</p>}
+              <Label htmlFor="linkUrl">Link URL (Optional)</Label>
+              <Input id="linkUrl" {...register('linkUrl')} placeholder="https://example.com" disabled={!!file} />
+              {errors.linkUrl && <p className="text-sm text-destructive">{errors.linkUrl.message}</p>}
             </div>
+            {linkUrl && (
+                <div className="space-y-2">
+                    <Label htmlFor="linkName">Link Name (Optional)</Label>
+                    <Input id="linkName" {...register('linkName')} placeholder="e.g. Google Drive Folder" />
+                </div>
+            )}
             <p className="text-center text-xs text-muted-foreground">OR</p>
             <div className="space-y-2">
                 <Label>Upload a Document (Optional)</Label>
@@ -356,6 +365,7 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
                                 },
                                 maxSize: 10 * 1024 * 1024, // 10MB
                                 multiple: false,
+                                disabled: !!linkUrl,
                             }}
                         />
                     )}
@@ -446,4 +456,5 @@ function ResourceActions({ resource }: { resource: Resource }) {
 
 
     
+
 
