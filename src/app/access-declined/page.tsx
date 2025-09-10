@@ -24,7 +24,7 @@ export default function AccessDeclinedPage() {
                         <ShieldAlert className="h-10 w-10 text-destructive" />
                     </div>
                     <CardTitle className="mt-4 font-headline text-2xl">
-                        Access Denied
+                        You have been PUrged!
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 text-muted-foreground">
