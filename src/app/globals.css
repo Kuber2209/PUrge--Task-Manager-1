@@ -5,28 +5,28 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 0 0% 100%;
+    --foreground: 224 71.4% 4.1%;
 
     --header-background: 222 47% 11%;
     --header-foreground: 210 40% 98%;
 
-    --card: 222 47% 11% / 0.1;
-    --card-foreground: 0 0% 98%;
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 0 0% 98%;
+    --card: 240 4.8% 95.9%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
     --primary: 262 84% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 224 71.4% 4.1%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
     --accent: 262 84% 60%;
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 63% 31%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 217.2 32.6% 17.5% / 0.2;
-    --input: 217.2 32.6% 17.5%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
     --ring: 262 84% 60%;
     --radius: 0.8rem;
   }
@@ -37,7 +37,7 @@
     --header-background: 222 47% 11%;
     --header-foreground: 210 40% 98%;
 
-    --card: 222 47% 11% / 0.1;
+    --card: 224 71.4% 4.1% / 0.7;
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 6%;
     --popover-foreground: 210 40% 98%;
@@ -51,7 +51,7 @@
     --accent-foreground: 210 40% 98%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5% / 0.2;
+    --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 262 84% 60%;
   }
@@ -63,44 +63,10 @@
   }
   body {
     @apply bg-background text-foreground;
-    overflow: hidden;
-  }
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -1;
-    pointer-events: none;
-    background-size: 300% 300%;
-    background-image: 
-      radial-gradient(circle at 25% 25%, hsl(220 70% 50% / 0.05) 0%, transparent 40%),
-      radial-gradient(circle at 75% 75%, hsl(260 70% 50% / 0.05) 0%, transparent 40%);
-    animation: move-aurora 30s linear infinite;
-    will-change: background-position;
-  }
-
-  .dark body::before {
-     background-image: 
-      radial-gradient(circle at 25% 25%, hsl(220 70% 50% / 0.05) 0%, transparent 40%),
-      radial-gradient(circle at 75% 75%, hsl(260 70% 50% / 0.05) 0%, transparent 40%);
-  }
-
-  @keyframes move-aurora {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
   }
 
   .dark body {
     background-color: #020617;
-  }
-  
-  .bg-card {
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
   }
 }
 
