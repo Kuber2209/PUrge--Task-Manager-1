@@ -33,11 +33,11 @@ export function Header() {
   const isAdmin = user?.email === ADMIN_EMAIL;
   
   return (
-    <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-header px-4 md:px-8 z-10">
+    <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-8 z-30">
       <div className="flex items-center gap-8 max-w-7xl mx-auto w-full">
         <Link href="/dashboard" className="flex items-center gap-3">
           <TieIcon className="h-6 w-6 text-primary" />
-          <h1 className="text-xl font-bold font-headline text-header-foreground hidden sm:block">PUrge BPHC</h1>
+          <h1 className="text-xl font-bold font-headline text-card-foreground hidden sm:block">PUrge BPHC</h1>
         </Link>
         <div className="ml-auto flex items-center gap-4">
 
@@ -50,7 +50,7 @@ export function Header() {
                 </Avatar>
               </Link>
               <div className='hidden sm:flex flex-col text-left'>
-                <span className="text-sm font-medium text-header-foreground">{user.name}</span>
+                <span className="text-sm font-medium text-card-foreground">{user.name}</span>
                 <span className="text-xs text-muted-foreground">{user.role}</span>
               </div>
             </div>
