@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,7 +11,7 @@
     --header-background: 240 10% 98%;
     --header-foreground: 224 71.4% 4.1%;
 
-    --card: 0 0% 100% / 0.6;
+    --card: 0 0% 100% / 0.05;
     --card-foreground: 224 71.4% 4.1%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 71.4% 4.1%;
@@ -24,7 +25,7 @@
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 220 13% 91% / 0.8;
+    --border: 220 13% 91% / 0.1;
     --input: 220 13% 91%;
     --ring: 271 91% 65%;
     --radius: 0.8rem;
@@ -36,7 +37,7 @@
     --header-background: 222 47% 11%;
     --header-foreground: 210 40% 98%;
 
-    --card: 222 47% 11% / 0.8;
+    --card: 222 47% 11% / 0.1;
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 6%;
     --popover-foreground: 210 40% 98%;
@@ -50,7 +51,7 @@
     --accent-foreground: 210 40% 98%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
+    --border: 217.2 32.6% 17.5% / 0.2;
     --input: 217.2 32.6% 17.5%;
     --ring: 271 91% 65%;
   }
@@ -75,16 +76,16 @@
     pointer-events: none;
     background-size: 300% 300%;
     background-image: 
-      radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.1) 0%, transparent 35%),
-      radial-gradient(circle at 75% 75%, hsl(var(--accent) / 0.1) 0%, transparent 35%);
+      radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, hsl(var(--accent) / 0.05) 0%, transparent 50%);
     animation: move-aurora 30s linear infinite;
     will-change: background-position;
   }
 
   .dark body::before {
      background-image: 
-      radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.15) 0%, transparent 35%),
-      radial-gradient(circle at 75% 75%, hsl(var(--accent) / 0.15) 0%, transparent 35%);
+      radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.1) 0%, transparent 40%),
+      radial-gradient(circle at 75% 75%, hsl(var(--accent) / 0.1) 0%, transparent 40%);
   }
 
   @keyframes move-aurora {
@@ -97,9 +98,9 @@
     background-color: #020617;
   }
   
-  .dark .bg-card, .bg-card {
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+  .bg-card {
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
   }
 }
 
