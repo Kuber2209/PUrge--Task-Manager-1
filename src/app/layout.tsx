@@ -22,7 +22,7 @@ export default function RootLayout({
         <meta name="google-site-verification" content="LTkd9pTTDc7c5pkAWEvh_gr_6GpXkfIMEgig7YnmN-4" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Lexend:wght@400;500;600&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <AuthProvider>

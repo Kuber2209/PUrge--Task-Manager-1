@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
@@ -200,7 +201,7 @@ function ResourceCard({ resource, users, currentUser, canManage }: { resource: R
                                 </AccordionTrigger>
                                 <AccordionContent className="space-y-4 pt-4">
                                     <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
-                                        {(resource.comments || []).map(comment => {
+                                        {(resource.comments || []).length > 0 ? (resource.comments || []).map(comment => {
                                             const commenter = users.find(u => u.id === comment.userId);
                                             return (
                                                 <div key={comment.id} className="flex items-start gap-3">
@@ -217,8 +218,7 @@ function ResourceCard({ resource, users, currentUser, canManage }: { resource: R
                                                     </div>
                                                 </div>
                                             )
-                                        })}
-                                        {(!resource.comments || resource.comments.length === 0) && <p className="text-sm text-center text-muted-foreground py-4">No comments yet.</p>}
+                                        }) : <p className="text-sm text-center text-muted-foreground py-4">No comments yet.</p>}
                                     </div>
                                     <div className="flex gap-2 items-center pt-4 border-t">
                                         <Input 
