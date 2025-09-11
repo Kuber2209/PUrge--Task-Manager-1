@@ -94,13 +94,13 @@ export function Dashboard() {
   const defaultTab = 'announcements';
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
+    <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
       <Header />
       <main className="flex flex-1 flex-col">
         <Tabs defaultValue={defaultTab} className="w-full flex flex-col" key={tabsKey}>
-           <div className='px-4 md:px-8 bg-card border-b'>
+           <div className='px-4 md:px-8 bg-header border-b border-border'>
              <div className="max-w-7xl mx-auto">
-                <TabsList className="flex flex-wrap h-auto -mb-px">
+                <TabsList className="flex flex-wrap h-auto">
                     <TabsTrigger value="announcements">Announcements</TabsTrigger>
                     <TabsTrigger value="resources">Resources</TabsTrigger>
                     <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -118,7 +118,7 @@ export function Dashboard() {
              </div>
            </div>
            
-           <div className="p-4 md:p-8 flex-1 bg-muted/40">
+           <div className="p-4 md:p-8 flex-1">
              <div className="max-w-7xl mx-auto">
                 <TabsContent value="announcements">
                   <Announcements />

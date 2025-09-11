@@ -57,7 +57,7 @@ export function Header() {
           )}
 
           {isAdmin && (
-             <Button variant="ghost" size="icon" asChild className="text-header-foreground hover:text-header-foreground hover:bg-white/10">
+             <Button variant="ghost" size="icon" asChild>
                <Link href="/admin">
                 <Shield className="h-5 w-5" />
                 <span className="sr-only">Admin</span>
@@ -65,13 +65,11 @@ export function Header() {
             </Button>
           )}
 
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-header-foreground hover:text-header-foreground hover:bg-white/10">
+          <Button variant="ghost" size="icon" onClick={handleLogout}>
             <LogOut className="h-5 w-5" />
             <span className="sr-only">Logout</span>
           </Button>
-          <div className="text-header-foreground">
-            <ThemeToggle />
-          </div>
+          <ThemeToggle />
         </div>
       </div>
     </header>
