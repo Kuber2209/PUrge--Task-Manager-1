@@ -94,7 +94,7 @@ export function Dashboard() {
   const defaultTab = 'announcements';
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
+    <div className="flex min-h-screen w-full flex-col bg-transparent text-foreground">
       <Header />
       <main className="flex flex-1 flex-col">
         <Tabs defaultValue={defaultTab} className="w-full flex flex-col" key={tabsKey}>

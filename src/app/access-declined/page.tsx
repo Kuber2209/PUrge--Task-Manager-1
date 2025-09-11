@@ -17,7 +17,7 @@ export default function AccessDeclinedPage() {
     }
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+        <div className="flex min-h-screen items-center justify-center bg-transparent p-4">
             <Card className="w-full max-w-md text-center">
                 <CardHeader>
                     <div className="mx-auto bg-destructive/10 p-3 rounded-full w-fit">

@@ -44,7 +44,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/20">
+    <div className="flex min-h-screen w-full flex-col bg-transparent">
       <Header />
       <main className="flex-1 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">

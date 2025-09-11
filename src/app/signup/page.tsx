@@ -114,7 +114,7 @@ export default function SignupPage() {
 
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4 relative">
+    <div className="flex min-h-screen items-center justify-center bg-transparent p-4 relative">
        <div className="absolute top-4 right-4">
           <ThemeToggle />
       </div>

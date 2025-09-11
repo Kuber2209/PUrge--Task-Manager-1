@@ -164,7 +164,7 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="flex min-h-screen w-full flex-col bg-muted/40">
+        <div className="flex min-h-screen w-full flex-col bg-transparent">
             <Header />
             <main className="flex-1 p-4 md:p-8">
                 <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-8">

@@ -6,7 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40 p-4 sm:p-6 md:p-8">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-transparent p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-4xl">
         <Button asChild variant="ghost" className="mb-4">
             <Link href="/dashboard">
