@@ -18,7 +18,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
     
-    --primary: 158 95% 31%; /* --first-color: #069C54; */
+    --primary: 175 95% 31%; /* Turquoise */
     --primary-foreground: 210 40% 98%;
     
     --secondary: 210 40% 96.1%;
@@ -35,7 +35,7 @@
     
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 158 95% 31%;
+    --ring: 175 95% 31%;
     
     --radius: 0.8rem;
   }
@@ -47,7 +47,7 @@
     --header-background: 222 47% 11%;
     --header-foreground: 210 40% 98%;
 
-    --card: 156 10% 17%; /* --container-color: #27302C; */
+    --card: 156 10% 17% / 0.5; /* --container-color: #27302C; */
     --card-foreground: 160 8% 95%; /* --title-color: #F1F3F2; */
     
     --popover: 150 11% 12%;
@@ -59,7 +59,7 @@
     --secondary: 156 10% 17%;
     --secondary-foreground: 210 40% 98%;
     
-    --muted: 156 10% 17%;
+    --muted: 156 10% 17% / 0.5;
     --muted-foreground: 156 13% 81%;
     
     --accent: 156 10% 17%;
@@ -68,7 +68,7 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 156 10% 17%;
+    --border: 156 10% 17% / 0.2;
     --input: 156 10% 17%;
     --ring: 175 95% 31%; /* Ring matches new turquoise primary */
   }
@@ -93,7 +93,7 @@
       }
   }
 
-  .dark body::before {
+  body::before {
     content: '';
     position: absolute;
     top: 0;
@@ -115,6 +115,11 @@
     background-repeat: no-repeat;
     background-size: 100% 100%;
     animation: aurora 20s linear infinite;
+  }
+
+  .dark .card {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 }
 
