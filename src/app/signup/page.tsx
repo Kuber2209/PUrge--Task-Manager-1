@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -16,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { LandingHeader } from '@/components/landing-header';
 
 const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters long.'),
@@ -55,16 +54,6 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-function TieIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M12 22s-4-4-4-9V3h8v10s-4 4-4 9z"/>
-      <path d="M10.5 7.5a1.5 1.5 0 0 1 3 0"/>
-    </svg>
-  );
-}
-
-
 export default function SignupPage() {
   const { signUp, signInWithGoogle } = useAuth();
   const router = useRouter();
@@ -84,7 +73,6 @@ export default function SignupPage() {
       toast({ title: 'Account Created!', description: 'You have been successfully signed up.' });
       router.push('/dashboard');
     } catch (err: any) {
-      // Error is already handled by the toast in useAuth
       setError(err.message || 'An unknown error occurred.');
     }
   };
@@ -94,8 +82,6 @@ export default function SignupPage() {
     setIsGoogleLoading(true);
     try {
       await signInWithGoogle();
-      // On successful popup login, the onAuthStateChanged listener in useAuth
-      // will trigger, and the app will redirect to the dashboard.
       router.push('/dashboard');
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
@@ -112,87 +98,82 @@ export default function SignupPage() {
     }
   }
 
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-transparent p-4 relative">
-       <div className="absolute top-4 right-4">
-          <ThemeToggle />
-      </div>
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-            <div className="flex justify-center items-center gap-2 mb-4">
-            <TieIcon className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold font-headline">PUrge BPHC</h1>
-        </div>
-        <CardTitle className="text-2xl">Create an account</CardTitle>
-        <CardDescription>Get started by signing up with Google or email.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          {error && (
-              <Alert variant="destructive">
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-              </Alert>
-          )}
-          
-          <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSubmitting || isGoogleLoading}>
-              {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
-              Sign Up with Google
-          </Button>
+    <div className='flex flex-col min-h-screen'>
+        <LandingHeader />
+        <main className="flex flex-1 items-center justify-center p-4">
+            <Card className="w-full max-w-sm">
+                <CardHeader className="text-center">
+                    <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
+                    <CardDescription>Join the team by signing up below.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4">
+                {error && (
+                    <Alert variant="destructive">
+                        <AlertTitle>Error</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
+                
+                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSubmitting || isGoogleLoading}>
+                    {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+                    Sign Up with Google
+                </Button>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                Or continue with email
-                </span>
-            </div>
-          </div>
-          
-          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" placeholder="Peter Parker" {...register('name')} />
-              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="m@example.com" {...register('email')} />
-              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-            </div>
-            <div className="grid gap-2 relative">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute bottom-1 right-1 h-7 w-7"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
-              </Button>
-              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-            </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting || isGoogleLoading}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Account
-            </Button>
-          </form>
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">
+                        Or continue with email
+                        </span>
+                    </div>
+                </div>
+                
+                <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
+                    <div className="grid gap-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input id="name" placeholder="Peter Parker" {...register('name')} />
+                    {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+                    </div>
+                    <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" placeholder="m@example.com" {...register('email')} />
+                    {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                    </div>
+                    <div className="grid gap-2 relative">
+                    <Label htmlFor="password">Password</Label>
+                    <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute bottom-1 right-1 h-7 w-7"
+                        onClick={() => setShowPassword(!showPassword)}
+                    >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
+                    </Button>
+                    {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isSubmitting || isGoogleLoading}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create Account
+                    </Button>
+                </form>
 
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <p className="text-sm text-center text-muted-foreground">
-            Already have an account?{' '}
-            <Link href="/login" className="underline font-medium text-primary">
-              Login
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-4">
+                <p className="text-sm text-center text-muted-foreground">
+                    Already have an account?{' '}
+                    <Link href="/login" className="underline font-medium text-primary">
+                    Login
+                    </Link>
+                </p>
+                </CardFooter>
+            </Card>
+        </main>
     </div>
   );
 }
