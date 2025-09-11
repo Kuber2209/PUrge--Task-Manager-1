@@ -40,7 +40,7 @@
     --radius: 0.8rem;
   }
   .dark {
-    /* Inspired by the new dark theme */
+    /* Inspired by the new dark theme, with turquoise primary */
     --background: 150 11% 12%; /* --body-color: #1D2521; */
     --foreground: 156 13% 81%; /* --text-color: #C7D1CC; */
 
@@ -53,7 +53,7 @@
     --popover: 150 11% 12%;
     --popover-foreground: 160 8% 95%;
     
-    --primary: 158 95% 31%;
+    --primary: 175 95% 31%; /* Turquoise */
     --primary-foreground: 210 40% 98%;
     
     --secondary: 156 10% 17%;
@@ -70,7 +70,7 @@
 
     --border: 156 10% 17%;
     --input: 156 10% 17%;
-    --ring: 158 95% 31%;
+    --ring: 175 95% 31%; /* Ring matches new turquoise primary */
   }
 }
 
