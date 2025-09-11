@@ -109,7 +109,7 @@
       ),
       radial-gradient(
         ellipse 80% 80% at 80% 50%,
-        hsl(260 70% 50% / 0.1),
+        hsl(220 70% 50% / 0.1),
         transparent
       );
     background-repeat: no-repeat;
