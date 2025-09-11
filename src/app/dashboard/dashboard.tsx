@@ -55,7 +55,7 @@ export function Dashboard() {
         if (!currentUser) return;
         try {
             const messaging = getMessaging(app);
-            const currentToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
+            const currentToken = await getToken(messaging, { vapidKey: "BH7_qYyF3YRoO8g_18P6p4a1X-NlqrouL092K2sBegor0N2_2Jb7sqOoi92uZM0YJ2A_SNd9v2sNyA_eXIm1Y-4" });
             
             if (currentToken) {
                 if (!currentUser.notificationTokens?.includes(currentToken)) {

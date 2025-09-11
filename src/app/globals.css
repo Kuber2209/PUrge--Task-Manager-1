@@ -83,6 +83,39 @@
     position: relative;
     overflow-x: hidden;
   }
+
+  @keyframes aurora {
+      from {
+        background-position: 50% 50%, 50% 50%;
+      }
+      to {
+        background-position: 350% 50%, 350% 50%;
+      }
+  }
+
+  .dark body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(
+        ellipse 80% 80% at 20% 40%,
+        hsl(175 95% 31% / 0.1),
+        transparent
+      ),
+      radial-gradient(
+        ellipse 80% 80% at 80% 50%,
+        hsl(260 70% 50% / 0.1),
+        transparent
+      );
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    animation: aurora 20s linear infinite;
+  }
 }
 
 @layer utilities {
