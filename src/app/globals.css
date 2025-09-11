@@ -85,10 +85,6 @@
     transform: translate(-50%, -50%);
   }
 
-  .dark body {
-    background-color: #020617;
-  }
-
   .dark body::before {
      background: radial-gradient(circle at top left, hsl(220 70% 50% / 0.2), transparent 50%),
                  radial-gradient(circle at bottom right, hsl(260 70% 50% / 0.2), transparent 50%);
