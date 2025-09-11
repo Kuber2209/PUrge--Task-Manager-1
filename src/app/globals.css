@@ -5,72 +5,64 @@
 
 @layer base {
   :root {
-    /* Inspired by the new design system */
-    --background: 200 60% 99%; /* --body-color: #FBFEFD; */
-    --foreground: 240 10% 3.9%; /* --title-color: #393939; */
+    --background: 240 5% 96%; /* Light Grey */
+    --foreground: 240 10% 3.9%;
 
-    --header-background: 222 47% 11%;
-    --header-foreground: 210 40% 98%;
-
-    --card: 0 0% 100%; /* --container-color: #FFFFFF; */
+    --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
     
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
     
-    --primary: 175 95% 31%; /* Turquoise */
+    --primary: 158 95% 31%; /* Green */
     --primary-foreground: 210 40% 98%;
     
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 6% 10%;
     
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%; /* --text-color-light: #A6A6A6; */
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
     
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 270 50% 60%; /* Deep Purple */
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 175 95% 31%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 176 84% 39%; /* Dark Teal for ring */
     
     --radius: 0.8rem;
   }
   .dark {
-    /* Inspired by the new dark theme, with turquoise primary */
-    --background: 150 11% 12%; /* --body-color: #1D2521; */
-    --foreground: 156 13% 81%; /* --text-color: #C7D1CC; */
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
 
-    --header-background: 222 47% 11%;
-    --header-foreground: 210 40% 98%;
-
-    --card: 156 10% 17% / 0.5; /* --container-color: #27302C; */
-    --card-foreground: 160 8% 95%; /* --title-color: #F1F3F2; */
+    --card: 222 47% 14% / 0.5;
+    --card-foreground: 210 40% 98%;
     
-    --popover: 150 11% 12%;
-    --popover-foreground: 160 8% 95%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
     
-    --primary: 175 95% 31%; /* Turquoise */
+    --primary: 176 50% 39%; /* Dark Teal */
     --primary-foreground: 210 40% 98%;
     
-    --secondary: 156 10% 17%;
+    --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
     
-    --muted: 156 10% 17% / 0.5;
-    --muted-foreground: 156 13% 81%;
+    --muted: 217 33% 17% / 0.7;
+    --muted-foreground: 215 20% 65%;
     
-    --accent: 156 10% 17%;
+    --accent: 270 50% 40%; /* Deep Purple */
     --accent-foreground: 210 40% 98%;
     
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 156 10% 17% / 0.2;
-    --input: 156 10% 17%;
-    --ring: 175 95% 31%; /* Ring matches new turquoise primary */
+    --border: 217 33% 25% / 0.8;
+    --input: 217 33% 17%;
+    --ring: 176 84% 39%;
   }
 }
 
@@ -83,6 +75,23 @@
     position: relative;
     overflow-x: hidden;
   }
+  
+  body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background: radial-gradient(ellipse at 20% 20%, hsl(158 95% 31% / 0.1), transparent 50%),
+                  radial-gradient(ellipse at 80% 30%, hsl(270 50% 60% / 0.1), transparent 60%);
+      filter: blur(90px);
+      animation: aurora 20s linear infinite;
+  }
+  
+  .dark body::before {
+      background: radial-gradient(circle at 10% 20%, hsl(var(--primary) / 0.15), transparent 40%),
+                  radial-gradient(circle at 90% 80%, hsl(var(--accent) / 0.15), transparent 40%);
+  }
 
   @keyframes aurora {
       from {
@@ -93,33 +102,14 @@
       }
   }
 
-  body::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -1;
-    pointer-events: none;
-    background-image: radial-gradient(
-        ellipse 80% 80% at 20% 40%,
-        hsl(175 95% 31% / 0.1),
-        transparent
-      ),
-      radial-gradient(
-        ellipse 80% 80% at 80% 50%,
-        hsl(220 70% 50% / 0.1),
-        transparent
-      );
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-    animation: aurora 20s linear infinite;
-  }
-
   .dark .card {
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .dark .bg-muted {
+      background-color: hsl(var(--muted));
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
   }
 }
 
@@ -135,12 +125,31 @@
           transform: translateY(0);
       }
   }
+  
+  .dark .task-card:hover {
+      box-shadow: 0 0 15px 0px hsl(var(--card-foreground) / 0.05);
+  }
 
   .btn-bounce {
-    @apply transition-transform duration-200 ease-in-out hover:scale-105 active:scale-95;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .btn-bounce:hover,
+  .btn-bounce:focus {
+      transform: scale(1.05);
+  }
+  .btn-bounce:active {
+      transform: scale(0.98);
   }
 
   .badge-squish {
-    @apply px-2 py-0.5 text-xs;
+      transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+   .badge-squish:hover {
+      transform: scale(1.1, 0.9);
+  }
+
+  .has-deadline::after {
+    content: '';
+    @apply absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-destructive;
   }
 }
