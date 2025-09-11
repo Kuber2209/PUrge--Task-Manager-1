@@ -76,16 +76,16 @@
     pointer-events: none;
     background-size: 300% 300%;
     background-image: 
-      radial-gradient(circle at 25% 25%, hsl(220 70% 50% / 0.1) 0%, transparent 40%),
-      radial-gradient(circle at 75% 75%, hsl(260 70% 50% / 0.1) 0%, transparent 40%);
+      radial-gradient(circle at 25% 25%, hsl(220 70% 50% / 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 75% 75%, hsl(260 70% 50% / 0.05) 0%, transparent 40%);
     animation: move-aurora 30s linear infinite;
     will-change: background-position;
   }
 
   .dark body::before {
      background-image: 
-      radial-gradient(circle at 25% 25%, hsl(220 70% 50% / 0.1) 0%, transparent 40%),
-      radial-gradient(circle at 75% 75%, hsl(260 70% 50% / 0.1) 0%, transparent 40%);
+      radial-gradient(circle at 25% 25%, hsl(220 70% 50% / 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 75% 75%, hsl(260 70% 50% / 0.05) 0%, transparent 40%);
   }
 
   @keyframes move-aurora {
