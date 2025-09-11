@@ -63,6 +63,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow: hidden;
   }
   body::before {
     content: '';
@@ -72,18 +73,19 @@
     width: 100vw;
     height: 100vh;
     z-index: -1;
-    background-size: 200% 200%;
+    pointer-events: none;
+    background-size: 300% 300%;
     background-image: 
-      radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.15) 0%, transparent 40%),
-      radial-gradient(circle at 75% 75%, hsl(var(--accent) / 0.15) 0%, transparent 40%);
-    animation: move-aurora 20s linear infinite;
+      radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.1) 0%, transparent 35%),
+      radial-gradient(circle at 75% 75%, hsl(var(--accent) / 0.1) 0%, transparent 35%);
+    animation: move-aurora 30s linear infinite;
     will-change: background-position;
   }
 
   .dark body::before {
      background-image: 
-      radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.25) 0%, transparent 40%),
-      radial-gradient(circle at 75% 75%, hsl(var(--accent) / 0.25) 0%, transparent 40%);
+      radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.15) 0%, transparent 35%),
+      radial-gradient(circle at 75% 75%, hsl(var(--accent) / 0.15) 0%, transparent 35%);
   }
 
   @keyframes move-aurora {
