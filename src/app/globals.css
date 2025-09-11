@@ -64,6 +64,34 @@
   body {
     @apply bg-background text-foreground;
   }
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    background-size: 200% 200%;
+    background-image: 
+      radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.15) 0%, transparent 40%),
+      radial-gradient(circle at 75% 75%, hsl(var(--accent) / 0.15) 0%, transparent 40%);
+    animation: move-aurora 20s linear infinite;
+    will-change: background-position;
+  }
+
+  .dark body::before {
+     background-image: 
+      radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.25) 0%, transparent 40%),
+      radial-gradient(circle at 75% 75%, hsl(var(--accent) / 0.25) 0%, transparent 40%);
+  }
+
+  @keyframes move-aurora {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
   .dark body {
     background-color: #020617;
   }
