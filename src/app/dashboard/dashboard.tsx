@@ -26,14 +26,25 @@ export function Dashboard() {
   const { toast } = useToast();
   
   useEffect(() => {
+    // 1. Register the service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/firebase-messaging-sw.js')
+        .then((registration) => {
+          console.log('Service Worker registration successful, scope is:', registration.scope);
+        })
+        .catch((err) => {
+          console.error('Service Worker registration failed:', err);
+        });
+    }
+
     if (!currentUser || typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
     
-    // This function handles the entire notification setup process
+    // 2. Set up notifications
     const setupNotifications = async () => {
       try {
         const messaging = getMessaging(app);
 
-        // 1. Request Permission
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
           toast({
@@ -44,21 +55,16 @@ export function Dashboard() {
           return;
         }
 
-        // 2. Get Token
         const currentToken = await getToken(messaging, { 
           vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY 
         });
 
         if (currentToken) {
-          // 3. Check if token is already on the user's profile
           if (!currentUser.notificationTokens?.includes(currentToken)) {
-            // 4. If not, add it to the user's profile in Firestore
             await updateUserProfile(currentUser.id, {
               notificationTokens: arrayUnion(currentToken)
             });
-            // Also update the local user object to prevent repeated writes
             setUser({ ...currentUser, notificationTokens: [...(currentUser.notificationTokens || []), currentToken] });
-
             toast({ title: "Notifications Enabled!", description: "You'll now receive updates on this device." });
           }
         } else {
@@ -71,7 +77,6 @@ export function Dashboard() {
         }
       } catch (err) {
         console.error("An error occurred while setting up notifications:", err);
-        // This is often a VAPID key issue or a browser-specific problem.
         toast({
           variant: 'destructive',
           title: "Notification Error",
@@ -80,8 +85,6 @@ export function Dashboard() {
       }
     };
 
-    // Use a timer to ask for permission a few seconds after the page loads
-    // This is less intrusive than an immediate popup.
     const timer = setTimeout(setupNotifications, 3000);
 
     return () => {
