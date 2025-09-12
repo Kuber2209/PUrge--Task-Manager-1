@@ -1,9 +1,9 @@
 
-// This file must be in the public directory
-import { initializeApp } from "firebase/app";
-import { getMessaging, onBackgroundMessage } from "firebase/messaging/sw";
+import { initializeApp } from 'firebase/app';
+import { getMessaging } from 'firebase/messaging/sw';
 
-// Your web app's Firebase configuration
+// This configuration is needed for the service worker to listen for messages in the background.
+// It's safe to expose these values.
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -16,15 +16,3 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
-
-onBackgroundMessage(messaging, (payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/icon-192x192.png' // Make sure you have an icon file here
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
