@@ -1,6 +1,7 @@
 
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import type { Task, Announcement, User } from "../../src/lib/types";
 
 // Initialize the Admin SDK. This is required to access Firestore and FCM.
 admin.initializeApp();
@@ -25,7 +26,7 @@ export const sendNewMessageNotification = functions.firestore
 
     // Get the task document to find recipients and task title
     const taskDoc = await db.doc(`tasks/${taskId}`).get();
-    const taskData = taskDoc.data();
+    const taskData = taskDoc.data() as Task | undefined;
     if (!taskData) {
       console.log("No task data found for taskId:", taskId);
       return;
@@ -45,17 +46,7 @@ export const sendNewMessageNotification = functions.firestore
     }
 
     // Get the notification tokens for all recipients
-    const tokensQuery = await db.collection("users")
-      .where("id", "in", recipients)
-      .get();
-
-    const tokens: string[] = [];
-    tokensQuery.forEach((userDoc) => {
-      const userData = userDoc.data();
-      if (userData.notificationTokens) {
-        tokens.push(...userData.notificationTokens);
-      }
-    });
+    const tokens = await getTokensForUsers(recipients);
 
     if (tokens.length === 0) {
       console.log("No notification tokens found for any recipients.");
@@ -76,6 +67,139 @@ export const sendNewMessageNotification = functions.firestore
       },
     };
 
-    console.log(`Sending notification to ${tokens.length} tokens.`);
+    console.log(`Sending message notification to ${tokens.length} tokens.`);
     return fcm.sendToDevice(tokens, payload);
   });
+
+/**
+ * Sends a notification when a new task is created.
+ */
+export const sendNewTaskNotification = functions.firestore
+    .document("tasks/{taskId}")
+    .onCreate(async (snapshot) => {
+        const taskData = snapshot.data() as Task;
+        if (!taskData) {
+            return;
+        }
+
+        // Determine recipients based on assignable roles
+        const assignableRoles = taskData.assignableTo;
+        if (!assignableRoles || assignableRoles.length === 0) {
+            console.log("No assignable roles for new task, no notification sent.");
+            return;
+        }
+
+        const usersSnapshot = await db.collection("users")
+            .where("role", "in", assignableRoles)
+            .get();
+
+        const recipientIds = usersSnapshot.docs
+          .map(doc => (doc.data() as User))
+          .filter(user => !user.isOnHoliday) // Exclude users on holiday
+          .map(user => user.id);
+
+        if (recipientIds.length === 0) {
+            console.log("No users found for the assignable roles.");
+            return;
+        }
+
+        const tokens = await getTokensForUsers(recipientIds);
+        if (tokens.length === 0) {
+            console.log("No notification tokens found for recipients.");
+            return;
+        }
+
+        const payload = {
+            notification: {
+                title: "New Task Available",
+                body: taskData.title,
+                click_action: `https://${process.env.GCLOUD_PROJECT}.web.app/dashboard`,
+            },
+            webpush: {
+                fcm_options: {
+                    link: `/dashboard`,
+                },
+            },
+        };
+
+        console.log(`Sending new task notification to ${tokens.length} tokens.`);
+        return fcm.sendToDevice(tokens, payload);
+    });
+
+/**
+ * Sends a notification when a new announcement is created.
+ */
+export const sendNewAnnouncementNotification = functions.firestore
+    .document("announcements/{announcementId}")
+    .onCreate(async (snapshot) => {
+        const announcementData = snapshot.data() as Announcement;
+        if (!announcementData) {
+            return;
+        }
+
+        let usersQuery;
+        if (announcementData.audience === "jpt-only") {
+            usersQuery = db.collection("users").where("role", "in", ["JPT", "SPT"]);
+        } else {
+            // "all" or undefined goes to everyone
+            usersQuery = db.collection("users");
+        }
+
+        const usersSnapshot = await usersQuery.get();
+        const recipientIds = usersSnapshot.docs.map(doc => doc.id);
+
+        if (recipientIds.length === 0) {
+            console.log("No recipients for announcement.");
+            return;
+        }
+
+        const tokens = await getTokensForUsers(recipientIds);
+        if (tokens.length === 0) {
+            console.log("No notification tokens for announcement.");
+            return;
+        }
+
+        const payload = {
+            notification: {
+                title: `New Announcement: ${announcementData.title}`,
+                body: announcementData.content.substring(0, 100),
+                click_action: `https://${process.env.GCLOUD_PROJECT}.web.app/dashboard`,
+            },
+             webpush: {
+                fcm_options: {
+                    link: `/dashboard`,
+                },
+            },
+        };
+
+        console.log(`Sending new announcement notification to ${tokens.length} tokens.`);
+        return fcm.sendToDevice(tokens, payload);
+    });
+
+/**
+ * Helper function to get notification tokens for a list of user IDs.
+ */
+async function getTokensForUsers(userIds: string[]): Promise<string[]> {
+    const tokens: string[] = [];
+    // Firestore 'in' queries are limited to 30 items. We need to chunk the userIds.
+    const chunks = [];
+    for (let i = 0; i < userIds.length; i += 30) {
+        chunks.push(userIds.slice(i, i + 30));
+    }
+
+    for (const chunk of chunks) {
+        if (chunk.length > 0) {
+            const tokensQuery = await db.collection("users")
+                .where("id", "in", chunk)
+                .get();
+
+            tokensQuery.forEach((userDoc) => {
+                const userData = userDoc.data();
+                if (userData.notificationTokens) {
+                    tokens.push(...userData.notificationTokens);
+                }
+            });
+        }
+    }
+    return tokens;
+}

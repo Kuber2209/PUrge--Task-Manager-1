@@ -59,7 +59,9 @@ export function Dashboard() {
                    toast({ variant: 'destructive', title: "Configuration Error", description: "VAPID Key for notifications is missing." });
                    return;
                 }
-                const newToken = await getToken(messaging, { vapidKey: firebaseConfig.vapidKey });
+                const newServiceWorker = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                const newToken = await getToken(messaging, { vapidKey: firebaseConfig.vapidKey, serviceWorkerRegistration: newServiceWorker });
+
                 if (newToken) {
                     if (!currentUser.notificationTokens?.includes(newToken)) {
                         await updateUserProfile(currentUser.id, { 
