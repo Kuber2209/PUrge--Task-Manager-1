@@ -179,29 +179,24 @@ export const sendNewAnnouncementNotification = functions.firestore
  * Helper function to get notification tokens for a list of user IDs.
  */
 async function getTokensForUsers(userIds: string[]): Promise<string[]> {
-    if (userIds.length === 0) return [];
+    if (userIds.length === 0) {
+        return [];
+    }
 
     const tokens: string[] = [];
-    // Firestore 'in' queries are limited to 30 items. We need to chunk the userIds.
-    const chunks: string[][] = [];
-    for (let i = 0; i < userIds.length; i += 30) {
-        chunks.push(userIds.slice(i, i + 30));
-    }
+    const userDocs = await Promise.all(
+        userIds.map(id => db.collection('users').doc(id).get())
+    );
 
-    for (const chunk of chunks) {
-        if (chunk.length > 0) {
-            const tokensQuery = await db.collection("users")
-                .where("id", "in", chunk)
-                .get();
-
-            tokensQuery.forEach((userDoc) => {
-                const userData = userDoc.data() as User;
-                // Only include users who are not on holiday and have tokens
-                if (userData.notificationTokens && userData.notificationTokens.length > 0 && !userData.isOnHoliday) {
-                    tokens.push(...userData.notificationTokens);
-                }
-            });
+    for (const userDoc of userDocs) {
+        if (userDoc.exists) {
+            const userData = userDoc.data() as User;
+            // Only include users who are not on holiday and have tokens
+            if (userData.notificationTokens && userData.notificationTokens.length > 0 && !userData.isOnHoliday) {
+                tokens.push(...userData.notificationTokens);
+            }
         }
     }
+    
     return [...new Set(tokens)]; // Return unique tokens
 }
