@@ -1,41 +1,25 @@
 
-// This file needs to be in the public directory.
+// This file needs to be in the public folder.
 
-// Give the service worker access to Firebase Messaging.
-// Note that you can only use Firebase Messaging here. Other Firebase libraries
-// are not available in the service worker.
-importScripts('https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.9.0/firebase-messaging-compat.js');
+import { initializeApp } from 'firebase/app';
+import { getMessaging } from 'firebase/messaging/sw';
 
-// Initialize the Firebase app in the service worker by passing in
-// your app's Firebase config object.
-// You MUST EDIT this snippet to replace the placeholder values with your
-// actual Firebase project's config values.
+// You need to copy your Firebase config object here.
+// This should be the same config object used to initialize the app in your main code.
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "REPLACE_WITH_YOUR_FIREBASE_CONFIG_VALUE",
+  authDomain: "REPLACE_WITH_YOUR_FIREBASE_CONFIG_VALUE",
+  projectId: "REPLACE_WITH_YOUR_FIREBASE_CONFIG_VALUE",
+  storageBucket: "REPLACE_WITH_YOUR_FIREBASE_CONFIG_VALUE",
+  messagingSenderId: "REPLACE_WITH_YOUR_FIREBASE_CONFIG_VALUE",
+  appId: "REPLACE_WITH_YOUR_FIREBASE_CONFIG_VALUE",
+  measurementId: "REPLACE_WITH_YOUR_FIREBASE_CONFIG_VALUE",
 };
 
-firebase.initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
 
+// The service worker doesn't do anything else here.
+// Firebase handles the background notification logic.
+// See: https://firebase.google.com/docs/cloud-messaging/js/receive#handle_messages_when_your_app_is_in_the_background
 
-// Retrieve an instance of Firebase Messaging so that it can handle background
-// messages.
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/firebase-logo.png' // You can add an icon here
-  };
-
-  self.registration.showNotification(notificationTitle,
-    notificationOptions);
-});

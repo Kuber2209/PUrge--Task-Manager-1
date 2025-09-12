@@ -13,6 +13,8 @@ const firebaseConfig = {
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  // IMPORTANT: You need to add your VAPID key here for notifications to work.
+  vapidKey: "REPLACE_WITH_YOUR_VAPID_KEY_FROM_FIREBASE_CONSOLE",
 };
 
 // Initialize Firebase
@@ -25,4 +27,4 @@ const storage = getStorage(app);
 const messaging = (typeof window !== 'undefined') ? getMessaging(app) : null;
 
 
-export { app, auth, db, storage, messaging };
+export { app, auth, db, storage, messaging, firebaseConfig };
