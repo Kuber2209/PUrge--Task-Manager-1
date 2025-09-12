@@ -202,8 +202,8 @@ async function getTokensForUsers(userIds: string[]): Promise<string[]> {
 
             tokensQuery.forEach((userDoc) => {
                 const userData = userDoc.data() as User;
-                // Only include users who are not on holiday
-                if (userData.notificationTokens && !userData.isOnHoliday) {
+                // Only include users who are not on holiday and have tokens
+                if (userData.notificationTokens && userData.notificationTokens.length > 0 && !userData.isOnHoliday) {
                     tokens.push(...userData.notificationTokens);
                 }
             });

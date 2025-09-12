@@ -18,80 +18,68 @@ import { getMessaging, getToken } from 'firebase/messaging';
 import { app } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserProfile } from '@/services/firestore';
-import { arrayUnion, arrayRemove } from 'firebase/firestore';
+import { arrayUnion } from 'firebase/firestore';
 
 
 export function Dashboard() {
-  const { user: currentUser, setUser } = useAuth();
+  const { user: currentUser } = useAuth();
   const { toast } = useToast();
   
   useEffect(() => {
-    // 1. Register the service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/firebase-messaging-sw.js')
-        .then((registration) => {
-          console.log('Service Worker registration successful, scope is:', registration.scope);
-        })
-        .catch((err) => {
-          console.error('Service Worker registration failed:', err);
-        });
-    }
-
-    if (!currentUser || typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+    if (!currentUser || typeof window === 'undefined') return;
     
-    // 2. Set up notifications
-    const setupNotifications = async () => {
-      try {
-        const messaging = getMessaging(app);
-
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-          toast({
-            title: "Notifications Disabled",
-            description: "You won't receive updates when the app is closed.",
-            variant: "destructive"
-          });
-          return;
+    const requestPermissionAndSetupNotifications = async () => {
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.log("This browser does not support desktop notification");
+            return;
         }
 
-        const currentToken = await getToken(messaging, { 
-          vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY 
-        });
-
-        if (currentToken) {
-          if (!currentUser.notificationTokens?.includes(currentToken)) {
-            await updateUserProfile(currentUser.id, {
-              notificationTokens: arrayUnion(currentToken)
-            });
-            setUser({ ...currentUser, notificationTokens: [...(currentUser.notificationTokens || []), currentToken] });
-            toast({ title: "Notifications Enabled!", description: "You'll now receive updates on this device." });
-          }
-        } else {
-          console.log('No registration token available. Request permission to generate one.');
-          toast({
-            title: "Could Not Get Notification Token",
-            description: "Please ensure your browser settings allow notifications.",
-            variant: "destructive"
-          });
+        if (Notification.permission === 'default') {
+            console.log('Requesting notification permission...');
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    await setupFcmToken();
+                } else {
+                    console.log('User denied notification permission.');
+                }
+            } catch (err) {
+                console.error('Error requesting notification permission', err);
+            }
+        } else if (Notification.permission === 'granted') {
+            await setupFcmToken();
         }
-      } catch (err) {
-        console.error("An error occurred while setting up notifications:", err);
-        toast({
-          variant: 'destructive',
-          title: "Notification Error",
-          description: "Could not enable notifications. This might be due to a configuration issue or browser settings."
-        });
-      }
+    }
+    
+    const setupFcmToken = async () => {
+        if (!currentUser) return;
+        try {
+            const messaging = getMessaging(app);
+            const currentToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
+            
+            if (currentToken) {
+                if (!currentUser.notificationTokens?.includes(currentToken)) {
+                    await updateUserProfile(currentUser.id, { 
+                        notificationTokens: arrayUnion(currentToken) 
+                    });
+                    toast({title: "Notifications Enabled!", description: "You'll now receive updates on this device."});
+                }
+            } else {
+                console.log('No registration token available. Request permission to generate one.');
+            }
+        } catch (err) {
+            console.error("Error getting notification token", err);
+            toast({ variant: 'destructive', title: "Notification Error", description: "Could not enable notifications. Check browser settings." });
+        }
     };
 
-    const timer = setTimeout(setupNotifications, 3000);
+    const timer = setTimeout(() => {
+        requestPermissionAndSetupNotifications();
+    }, 3000);
 
-    return () => {
-      clearTimeout(timer);
-    };
+    return () => clearTimeout(timer);
 
-  }, [currentUser, setUser, toast]);
+  }, [currentUser, toast]);
 
 
   if (!currentUser) {
