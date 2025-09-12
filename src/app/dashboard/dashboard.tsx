@@ -14,11 +14,11 @@ import { OngoingTasksDashboard } from '@/components/dashboard/ongoing-tasks-dash
 import { CalendarView } from '@/components/dashboard/calendar-view';
 import { Resources } from '@/components/dashboard/resources';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getMessaging, getToken, deleteToken } from 'firebase/messaging';
-import { app, firebaseConfig } from '@/lib/firebase';
+import { getMessaging, getToken } from 'firebase/messaging';
+import { app } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserProfile } from '@/services/firestore';
-import { arrayUnion, arrayRemove } from 'firebase/firestore';
+import { arrayUnion } from 'firebase/firestore';
 
 
 export function Dashboard() {
@@ -27,67 +27,54 @@ export function Dashboard() {
   
   useEffect(() => {
     if (!currentUser || typeof window === 'undefined') return;
+    
+    const requestPermissionAndSetupNotifications = async () => {
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.log("This browser does not support desktop notification");
+            return;
+        }
 
+        if (Notification.permission === 'default') {
+            console.log('Requesting notification permission...');
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    await setupFcmToken();
+                } else {
+                    console.log('User denied notification permission.');
+                }
+            } catch (err) {
+                console.error('Error requesting notification permission', err);
+            }
+        } else if (Notification.permission === 'granted') {
+            await setupFcmToken();
+        }
+    }
+    
     const setupFcmToken = async () => {
         if (!currentUser) return;
         try {
             const messaging = getMessaging(app);
+            const currentToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
             
-            // First, delete any old token to force a refresh.
-            // This helps if the token is stale or permissions changed.
-            const oldToken = await getToken(messaging).catch(() => null);
-            if (oldToken) {
-              await deleteToken(messaging);
-              // Also remove it from the user's profile in Firestore
-              await updateUserProfile(currentUser.id, {
-                  notificationTokens: arrayRemove(oldToken)
-              });
-            }
-
-            // Now request permission and get a new token
-            if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-                console.log("This browser does not support desktop notification");
-                return;
-            }
-
-            console.log('Requesting notification permission...');
-            const permission = await Notification.requestPermission();
-
-            if (permission === 'granted') {
-                if (!firebaseConfig.vapidKey || firebaseConfig.vapidKey === 'REPLACE_WITH_YOUR_VAPID_KEY_FROM_FIREBASE_CONSOLE') {
-                   console.error("VAPID key is not configured in src/lib/firebase.ts. Notifications will fail.");
-                   toast({ variant: 'destructive', title: "Configuration Error", description: "VAPID Key for notifications is missing." });
-                   return;
-                }
-                const newServiceWorker = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                const newToken = await getToken(messaging, { vapidKey: firebaseConfig.vapidKey, serviceWorkerRegistration: newServiceWorker });
-
-                if (newToken) {
-                    if (!currentUser.notificationTokens?.includes(newToken)) {
-                        await updateUserProfile(currentUser.id, { 
-                            notificationTokens: arrayUnion(newToken) 
-                        });
-                        toast({title: "Notifications Enabled!", description: "You'll now receive updates on this device."});
-                    }
-                } else {
-                     console.log('No registration token available after permission grant.');
+            if (currentToken) {
+                if (!currentUser.notificationTokens?.includes(currentToken)) {
+                    await updateUserProfile(currentUser.id, { 
+                        notificationTokens: arrayUnion(currentToken) 
+                    });
+                    toast({title: "Notifications Enabled!", description: "You'll now receive updates on this device."});
                 }
             } else {
-                 console.log('User denied notification permission.');
+                console.log('No registration token available. Request permission to generate one.');
             }
-        } catch (err: any) {
-            console.error("Error setting up notification token", err);
-            // Provide a more specific error message if the VAPID key is the issue.
-            if (err.message.includes("applicationServerKey")) {
-               toast({ variant: 'destructive', title: "Notification Error", description: "The VAPID key is invalid. Please check your Firebase configuration." });
-            } else {
-               toast({ variant: 'destructive', title: "Notification Error", description: "Could not enable notifications. Check browser settings." });
-            }
+        } catch (err) {
+            console.error("Error getting notification token", err);
+            toast({ variant: 'destructive', title: "Notification Error", description: "Could not enable notifications. Check browser settings." });
         }
     };
 
     const timer = setTimeout(() => {
-        setupFcmToken();
+        requestPermissionAndSetupNotifications();
     }, 3000);
 
     return () => clearTimeout(timer);
