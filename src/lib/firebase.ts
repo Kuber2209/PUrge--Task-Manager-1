@@ -5,7 +5,7 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getMessaging } from "firebase/messaging";
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -14,6 +14,7 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
   // IMPORTANT: You need to add your VAPID key here for notifications to work.
+  // Go to your Firebase project settings -> Cloud Messaging -> Web Push certificates and copy the "Key pair" value.
   vapidKey: "REPLACE_WITH_YOUR_VAPID_KEY_FROM_FIREBASE_CONSOLE",
 };
 
@@ -27,4 +28,4 @@ const storage = getStorage(app);
 const messaging = (typeof window !== 'undefined') ? getMessaging(app) : null;
 
 
-export { app, auth, db, storage, messaging, firebaseConfig };
+export { app, auth, db, storage, messaging };
