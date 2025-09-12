@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
-  setUser: (user: User | null) => void;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   logIn: (email: string, pass: string) => Promise<any>;
@@ -86,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 avatar: fbUser.photoURL || `https://i.pravatar.cc/150?u=${fbUser.uid}`,
                 isOnHoliday: false,
                 status: isAdmin || isWhitelisted ? 'active' : 'pending',
+                notificationTokens: [], // Initialize with an empty array
             };
             await createUserProfile(newUser);
             setUser(newUser);
@@ -149,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         avatar: fbUser.photoURL || `https://i.pravatar.cc/150?u=${fbUser.uid}`,
         isOnHoliday: false,
         status: isAdmin || isWhitelisted ? 'active' : 'pending',
+        notificationTokens: [],
     };
     await createUserProfile(newUser);
     setUser(newUser); // Manually set user to update UI state immediately
@@ -163,7 +165,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Email is blacklisted");
     }
     // `onAuthStateChanged` will handle profile creation and redirection.
-    // The hook now handles this logic robustly.
     return result;
   }
 
@@ -171,7 +172,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
     setUser(null);
     setFirebaseUser(null);
-    router.push('/login');
+    // Don't push to login here, allow the root page handler to do it.
+    // This prevents race conditions.
   };
 
 

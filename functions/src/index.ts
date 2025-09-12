@@ -52,18 +52,18 @@ export const sendNewMessageNotification = functions.firestore
       console.log("No notification tokens found for any recipients.");
       return;
     }
+    
+    const senderDoc = await db.doc(`users/${senderId}`).get();
+    const senderName = senderDoc.data()?.name || 'Someone';
 
     // Construct the notification payload
     const payload = {
       notification: {
         title: `New message in: ${taskData.title}`,
-        body: messageData.text.substring(0, 100), // Truncate long messages
-        click_action: `https://${process.env.GCLOUD_PROJECT}.web.app/task/${taskId}`,
+        body: `${senderName}: ${messageData.text.substring(0, 100)}`, // Truncate long messages
       },
-      webpush: {
-        fcm_options: {
-          link: `/task/${taskId}`,
-        },
+      fcmOptions: {
+        link: `/task/${taskId}`,
       },
     };
 
@@ -79,6 +79,7 @@ export const sendNewTaskNotification = functions.firestore
     .onCreate(async (snapshot) => {
         const taskData = snapshot.data() as Task;
         if (!taskData) {
+            console.log("New task data is empty, no notification sent.");
             return;
         }
 
@@ -96,29 +97,29 @@ export const sendNewTaskNotification = functions.firestore
         const recipientIds = usersSnapshot.docs
           .map(doc => (doc.data() as User))
           .filter(user => !user.isOnHoliday) // Exclude users on holiday
-          .map(user => user.id);
+          .map(user => user.id)
+          // Exclude users who are already directly assigned on creation
+          .filter(id => !taskData.assignedTo.includes(id));
+
 
         if (recipientIds.length === 0) {
-            console.log("No users found for the assignable roles.");
+            console.log("No users found for the assignable roles to notify.");
             return;
         }
 
         const tokens = await getTokensForUsers(recipientIds);
         if (tokens.length === 0) {
-            console.log("No notification tokens found for recipients.");
+            console.log("No notification tokens found for new task recipients.");
             return;
         }
 
         const payload = {
             notification: {
                 title: "New Task Available",
-                body: taskData.title,
-                click_action: `https://${process.env.GCLOUD_PROJECT}.web.app/dashboard`,
+                body: `A new task has been posted: "${taskData.title}"`,
             },
-            webpush: {
-                fcm_options: {
-                    link: `/dashboard`,
-                },
+            fcmOptions: {
+                link: `/dashboard`, // Links to the main dashboard
             },
         };
 
@@ -138,15 +139,19 @@ export const sendNewAnnouncementNotification = functions.firestore
         }
 
         let usersQuery;
+        // JPTs and SPTs see everything, so we only need to filter for Associates if audience is 'all'
         if (announcementData.audience === "jpt-only") {
             usersQuery = db.collection("users").where("role", "in", ["JPT", "SPT"]);
         } else {
-            // "all" or undefined goes to everyone
+            // 'all' goes to everyone
             usersQuery = db.collection("users");
         }
 
         const usersSnapshot = await usersQuery.get();
-        const recipientIds = usersSnapshot.docs.map(doc => doc.id);
+        const recipientIds = usersSnapshot.docs
+            .map(doc => doc.id)
+            .filter(id => id !== announcementData.authorId); // Exclude the author
+
 
         if (recipientIds.length === 0) {
             console.log("No recipients for announcement.");
@@ -159,16 +164,16 @@ export const sendNewAnnouncementNotification = functions.firestore
             return;
         }
 
+        const authorDoc = await db.doc(`users/${announcementData.authorId}`).get();
+        const authorName = authorDoc.data()?.name || 'Admin';
+
         const payload = {
             notification: {
                 title: `New Announcement: ${announcementData.title}`,
-                body: announcementData.content.substring(0, 100),
-                click_action: `https://${process.env.GCLOUD_PROJECT}.web.app/dashboard`,
+                body: `Posted by ${authorName}: ${announcementData.content.substring(0, 100)}`,
             },
-             webpush: {
-                fcm_options: {
-                    link: `/dashboard`,
-                },
+            fcmOptions: {
+                link: `/dashboard`,
             },
         };
 
@@ -180,9 +185,11 @@ export const sendNewAnnouncementNotification = functions.firestore
  * Helper function to get notification tokens for a list of user IDs.
  */
 async function getTokensForUsers(userIds: string[]): Promise<string[]> {
+    if (userIds.length === 0) return [];
+
     const tokens: string[] = [];
     // Firestore 'in' queries are limited to 30 items. We need to chunk the userIds.
-    const chunks = [];
+    const chunks: string[][] = [];
     for (let i = 0; i < userIds.length; i += 30) {
         chunks.push(userIds.slice(i, i + 30));
     }
@@ -194,12 +201,13 @@ async function getTokensForUsers(userIds: string[]): Promise<string[]> {
                 .get();
 
             tokensQuery.forEach((userDoc) => {
-                const userData = userDoc.data();
-                if (userData.notificationTokens) {
+                const userData = userDoc.data() as User;
+                // Only include users who are not on holiday
+                if (userData.notificationTokens && !userData.isOnHoliday) {
                     tokens.push(...userData.notificationTokens);
                 }
             });
         }
     }
-    return tokens;
+    return [...new Set(tokens)]; // Return unique tokens
 }

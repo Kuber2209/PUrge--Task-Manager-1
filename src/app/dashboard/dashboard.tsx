@@ -18,68 +18,77 @@ import { getMessaging, getToken } from 'firebase/messaging';
 import { app } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserProfile } from '@/services/firestore';
-import { arrayUnion } from 'firebase/firestore';
+import { arrayUnion, arrayRemove } from 'firebase/firestore';
 
 
 export function Dashboard() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, setUser } = useAuth();
   const { toast } = useToast();
   
   useEffect(() => {
-    if (!currentUser || typeof window === 'undefined') return;
+    if (!currentUser || typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
     
-    const requestPermissionAndSetupNotifications = async () => {
-        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-            console.log("This browser does not support desktop notification");
-            return;
+    // This function handles the entire notification setup process
+    const setupNotifications = async () => {
+      try {
+        const messaging = getMessaging(app);
+
+        // 1. Request Permission
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          toast({
+            title: "Notifications Disabled",
+            description: "You won't receive updates when the app is closed.",
+            variant: "destructive"
+          });
+          return;
         }
 
-        if (Notification.permission === 'default') {
-            console.log('Requesting notification permission...');
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    await setupFcmToken();
-                } else {
-                    console.log('User denied notification permission.');
-                }
-            } catch (err) {
-                console.error('Error requesting notification permission', err);
-            }
-        } else if (Notification.permission === 'granted') {
-            await setupFcmToken();
+        // 2. Get Token
+        const currentToken = await getToken(messaging, { 
+          vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY 
+        });
+
+        if (currentToken) {
+          // 3. Check if token is already on the user's profile
+          if (!currentUser.notificationTokens?.includes(currentToken)) {
+            // 4. If not, add it to the user's profile in Firestore
+            await updateUserProfile(currentUser.id, {
+              notificationTokens: arrayUnion(currentToken)
+            });
+            // Also update the local user object to prevent repeated writes
+            setUser({ ...currentUser, notificationTokens: [...(currentUser.notificationTokens || []), currentToken] });
+
+            toast({ title: "Notifications Enabled!", description: "You'll now receive updates on this device." });
+          }
+        } else {
+          console.log('No registration token available. Request permission to generate one.');
+          toast({
+            title: "Could Not Get Notification Token",
+            description: "Please ensure your browser settings allow notifications.",
+            variant: "destructive"
+          });
         }
-    }
-    
-    const setupFcmToken = async () => {
-        if (!currentUser) return;
-        try {
-            const messaging = getMessaging(app);
-            const currentToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
-            
-            if (currentToken) {
-                if (!currentUser.notificationTokens?.includes(currentToken)) {
-                    await updateUserProfile(currentUser.id, { 
-                        notificationTokens: arrayUnion(currentToken) 
-                    });
-                    toast({title: "Notifications Enabled!", description: "You'll now receive updates on this device."});
-                }
-            } else {
-                console.log('No registration token available. Request permission to generate one.');
-            }
-        } catch (err) {
-            console.error("Error getting notification token", err);
-            toast({ variant: 'destructive', title: "Notification Error", description: "Could not enable notifications. Check browser settings." });
-        }
+      } catch (err) {
+        console.error("An error occurred while setting up notifications:", err);
+        // This is often a VAPID key issue or a browser-specific problem.
+        toast({
+          variant: 'destructive',
+          title: "Notification Error",
+          description: "Could not enable notifications. This might be due to a configuration issue or browser settings."
+        });
+      }
     };
 
-    const timer = setTimeout(() => {
-        requestPermissionAndSetupNotifications();
-    }, 3000);
+    // Use a timer to ask for permission a few seconds after the page loads
+    // This is less intrusive than an immediate popup.
+    const timer = setTimeout(setupNotifications, 3000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
 
-  }, [currentUser, toast]);
+  }, [currentUser, setUser, toast]);
 
 
   if (!currentUser) {
@@ -98,9 +107,9 @@ export function Dashboard() {
       <Header />
       <main className="flex flex-1 flex-col">
         <Tabs defaultValue={defaultTab} className="w-full flex flex-col" key={tabsKey}>
-           <div className='px-4 md:px-8 bg-card border-b border-border sticky top-16 z-20'>
-             <div className="max-w-7xl mx-auto overflow-x-auto">
-                <TabsList className="h-auto">
+           <div className='px-4 md:px-8 bg-header border-b border-border'>
+             <div className="max-w-7xl mx-auto">
+                <TabsList className="flex flex-wrap h-auto">
                     <TabsTrigger value="announcements">Announcements</TabsTrigger>
                     <TabsTrigger value="resources">Resources</TabsTrigger>
                     <TabsTrigger value="calendar">Calendar</TabsTrigger>
