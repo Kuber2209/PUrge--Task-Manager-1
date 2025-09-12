@@ -378,13 +378,13 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
         </DialogTrigger>
       )}
      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
-        <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col flex-1 overflow-hidden'>
-          <DialogHeader>
-            <DialogTitle className="font-headline">{isEdit ? 'Edit Announcement' : 'Post a New Announcement'}</DialogTitle>
-            <DialogDescription>
-              {isEdit ? 'Modify the details below.' : 'This announcement will be visible to all team members.'}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogHeader>
+          <DialogTitle className="font-headline">{isEdit ? 'Edit Announcement' : 'Post a New Announcement'}</DialogTitle>
+          <DialogDescription>
+            {isEdit ? 'Modify the details below.' : 'This announcement will be visible to all team members.'}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(onSubmit)} id="announcement-form" className='flex flex-col flex-1 overflow-hidden'>
           <div className="flex-1 overflow-y-auto -mr-6 pr-6 py-4 grid gap-4">
              {currentUser?.role === 'SPT' && (
                 <div className="space-y-2">
@@ -511,10 +511,9 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
                     </div>
                 )}
             </div>
-
           </div>
           <DialogFooter>
-            <Button type="submit" form="create-task-form" disabled={isSubmitting || uploading || recordingStatus !== 'idle'}>
+            <Button type="submit" form="announcement-form" disabled={isSubmitting || uploading || recordingStatus !== 'idle'}>
               {(isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEdit ? 'Save Changes' : 'Post Announcement'}
             </Button>
@@ -597,3 +596,5 @@ function AnnouncementActions({ announcement }: { announcement: Announcement }) {
         </>
     )
 }
+
+    
