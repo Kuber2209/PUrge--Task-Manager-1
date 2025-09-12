@@ -54,11 +54,11 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export default function LoginPage() {
-  const { logIn, signInWithGoogle, user } = useAuth();
+  const { logIn, signInWithGoogle, user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
@@ -66,38 +66,62 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (user) {
-      router.push('/dashboard');
+    if (!loading && user) {
+        // The main redirect logic is in `src/app/page.tsx`
+        // but as a fallback, we redirect here too.
+        if (user.status === 'pending') {
+            router.push('/pending-approval');
+        } else if (user.status === 'declined') {
+            router.push('/access-declined');
+        } else {
+            router.push('/dashboard');
+        }
     }
-  }, [user, router]);
+  }, [user, loading, router]);
+  
+  if (isProcessing || loading) {
+    return (
+        <div className="flex flex-col min-h-screen">
+         <LandingHeader />
+         <main className="flex flex-1 items-center justify-center p-4">
+           <div className="flex flex-col items-center gap-2 text-center">
+             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+             <p className="text-muted-foreground">Signing in...</p>
+           </div>
+         </main>
+       </div>
+    )
+  }
 
   const onSubmit = async (data: LoginFormData) => {
     setError(null);
+    setIsProcessing(true);
     try {
       await logIn(data.email, data.password);
-      toast({ title: 'Login Successful!', description: 'Welcome back.' });
+      // onAuthStateChanged will handle the redirect
     } catch (err: any) {
       setError(err.message || 'An unknown error occurred.');
+      setIsProcessing(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
     setError(null);
-    setIsGoogleLoading(true);
+    setIsProcessing(true);
     try {
       await signInWithGoogle();
+      // onAuthStateChanged will handle the redirect
     } catch (err: any) {
-       if (err.code === 'auth/popup-closed-by-user') {
+       if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
         toast({
           variant: 'destructive',
           title: 'Sign-in cancelled',
-          description: 'The sign-in window was closed. Please check if your browser is blocking popups.',
+          description: 'The sign-in window was closed. Please try again.',
         });
       } else {
         setError(err.message || 'An unknown error occurred during Google sign-in.');
       }
-    } finally {
-        setIsGoogleLoading(false);
+      setIsProcessing(false);
     }
   }
 
@@ -117,8 +141,8 @@ export default function LoginPage() {
                 <AlertDescription>{error}</AlertDescription>
                 </Alert>
             )}
-            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSubmitting || isGoogleLoading}>
-                {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSubmitting}>
+                <GoogleIcon className="mr-2 h-4 w-4" />
                 Sign In with Google
             </Button>
 
@@ -154,7 +178,7 @@ export default function LoginPage() {
                 </Button>
                 {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
                 </div>
-                <Button type="submit" className="w-full" disabled={isSubmitting || isGoogleLoading}>
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign In
                 </Button>

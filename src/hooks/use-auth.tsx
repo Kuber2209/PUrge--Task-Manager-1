@@ -44,13 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      setLoading(true);
       try {
         if (fbUser) {
           setFirebaseUser(fbUser);
           
           if (fbUser.email && await isEmailBlacklisted(fbUser.email) && fbUser.email !== ADMIN_EMAIL) {
             await handleBlacklistedAccess(fbUser.email);
-            setLoading(false);
             router.push('/access-declined');
             return;
           }
@@ -60,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (userProfile) {
             // Existing user
             if (userProfile.status === 'pending' && userProfile.email !== ADMIN_EMAIL) {
+              setUser(userProfile);
               router.push('/pending-approval');
             } else if (userProfile.status === 'declined') {
                await signOut(auth);
@@ -71,7 +72,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } else {
              // This is a new user
              if (!fbUser.email) {
-                setLoading(false);
                 return;
              }
 
@@ -100,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error("onAuthStateChanged: Error processing auth state:", error);
+        toast({variant: 'destructive', title: 'Authentication Error', description: 'Could not verify user status.'});
         setUser(null); 
         setFirebaseUser(null);
       } finally {
@@ -133,7 +134,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-    // onAuthStateChanged will handle the rest of the profile creation and redirection
+    const fbUser = userCredential.user;
+    
+    // Explicitly create profile here instead of only relying on onAuthStateChanged
+    // to avoid race conditions on initial sign-up.
+    const isWhitelisted = await isEmailWhitelisted(fbUser.email!);
+    const isAdmin = fbUser.email === ADMIN_EMAIL;
+
+    const newUser: User = {
+        id: fbUser.uid,
+        name: name, // Use the name from the form
+        email: fbUser.email!,
+        role: isAdmin ? 'SPT' : 'Associate', 
+        avatar: fbUser.photoURL || `https://i.pravatar.cc/150?u=${fbUser.uid}`,
+        isOnHoliday: false,
+        status: isAdmin || isWhitelisted ? 'active' : 'pending',
+    };
+    await createUserProfile(newUser);
+    setUser(newUser); // Manually set user to update UI state immediately
   };
 
   const signInWithGoogle = async () => {
@@ -141,21 +159,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await signInWithPopup(auth, provider);
     const email = result.user.email;
      if (email && await isEmailBlacklisted(email) && email !== ADMIN_EMAIL) {
-        await signOut(auth); // Sign out immediately
-        toast({
-            variant: 'destructive',
-            title: 'Access Denied',
-            description: 'This email is on the blacklist.',
-        });
+        await handleBlacklistedAccess(email);
         throw new Error("Email is blacklisted");
     }
-    // onAuthStateChanged will handle the rest
+    // `onAuthStateChanged` will handle profile creation and redirection.
+    // The hook now handles this logic robustly.
     return result;
   }
 
-  const logOut = () => {
+  const logOut = async () => {
+    await signOut(auth);
+    setUser(null);
+    setFirebaseUser(null);
     router.push('/login');
-    return signOut(auth);
   };
 
 

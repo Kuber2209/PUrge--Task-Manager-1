@@ -55,46 +55,68 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export default function SignupPage() {
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signUp, signInWithGoogle, loading, user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
   });
+  
+  useState(() => {
+    if (!loading && user) {
+      router.push('/dashboard');
+    }
+  });
+
+  if (isProcessing || loading) {
+    return (
+       <div className="flex flex-col min-h-screen">
+         <LandingHeader />
+         <main className="flex flex-1 items-center justify-center p-4">
+           <div className="flex flex-col items-center gap-2 text-center">
+             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+             <p className="text-muted-foreground">Creating account...</p>
+           </div>
+         </main>
+       </div>
+    )
+  }
+
 
   const onSubmit = async (data: SignupFormData) => {
     setError(null);
+    setIsProcessing(true);
     try {
       await signUp(data.email, data.password, data.name);
-      toast({ title: 'Account Created!', description: 'You have been successfully signed up.' });
-      router.push('/dashboard');
+      toast({ title: 'Account Created!', description: 'Your account is being set up.' });
+      // onAuthStateChanged will handle the redirect
     } catch (err: any) {
       setError(err.message || 'An unknown error occurred.');
+      setIsProcessing(false);
     }
   };
   
   const handleGoogleSignIn = async () => {
     setError(null);
-    setIsGoogleLoading(true);
+    setIsProcessing(true);
     try {
       await signInWithGoogle();
-      router.push('/dashboard');
+      // onAuthStateChanged will handle the redirect
     } catch (err: any) {
-      if (err.code === 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
         toast({
           variant: 'destructive',
           title: 'Sign-up cancelled',
-          description: 'The sign-up window was closed. Please check if your browser is blocking popups.',
+          description: 'The sign-up window was closed. Please try again.',
         });
       } else {
         setError(err.message || 'An unknown error occurred during Google sign-up.');
       }
-    } finally {
-        setIsGoogleLoading(false);
+      setIsProcessing(false);
     }
   }
 
@@ -115,8 +137,8 @@ export default function SignupPage() {
                     </Alert>
                 )}
                 
-                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSubmitting || isGoogleLoading}>
-                    {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSubmitting}>
+                    <GoogleIcon className="mr-2 h-4 w-4" />
                     Sign Up with Google
                 </Button>
 
@@ -157,7 +179,7 @@ export default function SignupPage() {
                     </Button>
                     {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
                     </div>
-                    <Button type="submit" className="w-full" disabled={isSubmitting || isGoogleLoading}>
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Create Account
                     </Button>
