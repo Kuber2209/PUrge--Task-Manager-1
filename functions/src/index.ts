@@ -89,12 +89,11 @@ export const sendNewTaskNotification = functions.firestore
 
         const usersSnapshot = await db.collection("users")
             .where("role", "in", assignableRoles)
+            .where("isOnHoliday", "!=", true) // Exclude users on holiday
             .get();
 
         const recipientIds = usersSnapshot.docs
-          .map(doc => (doc.data() as User))
-          .filter(user => !user.isOnHoliday) // Exclude users on holiday
-          .map(user => user.id)
+          .map(doc => (doc.data() as User).id)
           // Exclude users who are already directly assigned on creation
           .filter(id => !taskData.assignedTo.includes(id));
 
@@ -144,7 +143,8 @@ export const sendNewAnnouncementNotification = functions.firestore
             usersQuery = db.collection("users");
         }
 
-        const usersSnapshot = await usersQuery.get();
+        const usersSnapshot = await usersQuery.where("isOnHoliday", "!=", true).get();
+
         const recipientIds = usersSnapshot.docs
             .map(doc => doc.id)
             .filter(id => id !== announcementData.authorId); // Exclude the author
@@ -177,6 +177,7 @@ export const sendNewAnnouncementNotification = functions.firestore
 
 /**
  * Helper function to get notification tokens for a list of user IDs.
+ * This version correctly fetches user documents and filters out users on holiday.
  */
 async function getTokensForUsers(userIds: string[]): Promise<string[]> {
     if (userIds.length === 0) {
@@ -184,6 +185,9 @@ async function getTokensForUsers(userIds: string[]): Promise<string[]> {
     }
 
     const tokens: string[] = [];
+    // Firestore 'in' queries are limited to 30 items. We fetch docs one by one
+    // which is less efficient but robust for smaller sets of users per event.
+    // For larger-scale apps, batching with 'in' would be necessary.
     const userDocs = await Promise.all(
         userIds.map(id => db.collection('users').doc(id).get())
     );
@@ -191,12 +195,14 @@ async function getTokensForUsers(userIds: string[]): Promise<string[]> {
     for (const userDoc of userDocs) {
         if (userDoc.exists) {
             const userData = userDoc.data() as User;
-            // Only include users who are not on holiday and have tokens
+            // The holiday check is now primarily done in the calling function,
+            // but keeping it here is a good safeguard.
             if (userData.notificationTokens && userData.notificationTokens.length > 0 && !userData.isOnHoliday) {
                 tokens.push(...userData.notificationTokens);
             }
         }
     }
     
-    return [...new Set(tokens)]; // Return unique tokens
+    // Return unique tokens
+    return [...new Set(tokens)];
 }
