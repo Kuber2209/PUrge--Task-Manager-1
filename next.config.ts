@@ -12,15 +12,21 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
+        hostname: 'picsum.photos',
       },
        {
         protocol: 'https',
         hostname: 'i.pravatar.cc',
       }
     ],
+  },
+   async rewrites() {
+    return [
+      {
+        source: '/__/firebase/init.json',
+        destination: '/api/firebase-config',
+      },
+    ];
   },
 };
 
