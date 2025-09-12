@@ -8,7 +8,7 @@ import { LogOut, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '../theme-toggle';
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 function TieIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -24,6 +24,7 @@ const ADMIN_EMAIL = 'f20240819@hyderabad.bits-pilani.ac.in';
 export function Header() {
   const { user, logOut } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleLogout = async () => {
     await logOut();
@@ -31,6 +32,7 @@ export function Header() {
   };
 
   const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdminPage = pathname === '/admin';
   
   return (
     <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-8 z-30">
@@ -58,7 +60,7 @@ export function Header() {
 
           {isAdmin && (
              <Button variant="ghost" size="icon" asChild>
-               <Link href="/admin">
+               <Link href={isAdminPage ? "/dashboard" : "/admin"}>
                 <Shield className="h-5 w-5" />
                 <span className="sr-only">Admin</span>
               </Link>
