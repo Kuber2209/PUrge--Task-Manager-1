@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -66,31 +67,35 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
+    // If the user is already logged in (e.g. they hit the back button),
+    // the root page (`/`) will handle the redirect. We just prevent
+    // them from seeing the login form again.
     if (!loading && user) {
-        // The main redirect logic is in `src/app/page.tsx`
-        // but as a fallback, we redirect here too.
-        if (user.status === 'pending') {
-            router.push('/pending-approval');
-        } else if (user.status === 'declined') {
-            router.push('/access-declined');
-        } else {
-            router.push('/dashboard');
-        }
+        router.push('/');
     }
   }, [user, loading, router]);
   
-  if (isProcessing || loading) {
+  // This state covers the time between form submission and `onAuthStateChanged` completion
+  if (isProcessing) {
     return (
         <div className="flex flex-col min-h-screen">
          <LandingHeader />
          <main className="flex flex-1 items-center justify-center p-4">
            <div className="flex flex-col items-center gap-2 text-center">
              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-             <p className="text-muted-foreground">Signing in...</p>
+             <p className="text-muted-foreground">Verifying...</p>
            </div>
          </main>
        </div>
     )
+  }
+  
+  // The root page will show a loading screen while auth is being checked.
+  // If we get here and we are still loading, or a user object exists,
+  // it means the redirect from the root page is about to happen.
+  // We can show nothing or a minimal loader.
+  if (loading || user) {
+    return null;
   }
 
   const onSubmit = async (data: LoginFormData) => {
@@ -98,7 +103,7 @@ export default function LoginPage() {
     setIsProcessing(true);
     try {
       await logIn(data.email, data.password);
-      // onAuthStateChanged will handle the redirect
+      // onAuthStateChanged will handle the redirect via the root page
     } catch (err: any) {
       setError(err.message || 'An unknown error occurred.');
       setIsProcessing(false);
@@ -110,7 +115,7 @@ export default function LoginPage() {
     setIsProcessing(true);
     try {
       await signInWithGoogle();
-      // onAuthStateChanged will handle the redirect
+      // onAuthStateChanged will handle the redirect via the root page
     } catch (err: any) {
        if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
         toast({
