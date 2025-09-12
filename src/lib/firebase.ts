@@ -15,7 +15,7 @@ export const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
   // IMPORTANT: You need to add your VAPID key here for notifications to work.
   // Go to your Firebase project settings -> Cloud Messaging -> Web Push certificates and copy the "Key pair" value.
-  vapidKey: "REPLACE_WITH_YOUR_VAPID_KEY_FROM_FIREBASE_CONSOLE",
+  vapidKey: "BGFDHORp9hP5L0PhHxn3cxFGHAndGQb-E9MLK1pXp707LXro7UCEREJo4YgkdtEnDVyzWz9Cr_nzuX2bVej9RGY",
 };
 
 // Initialize Firebase
