@@ -4,6 +4,7 @@ This guide contains four main sections:
 1.  **Local Testing:** How to run the app on your computer for testing before deployment.
 2.  **Version Control with Git:** How to track changes to your code locally and push them to GitHub.
 3.  **Public Deployment:** How to make your app live on the internet using services like Vercel or Firebase.
+4.  **Staging and Production Workflow:** How to test new features safely before updating your live application.
 
 ---
 
@@ -145,3 +146,49 @@ You can also deploy directly to Firebase.
         ```
 
 After the command finishes, the terminal will display your **Public URL** (it will look something like `https://your-project-id.web.app`). Congratulations, your app is live!
+
+---
+
+### 🧪 Section 4: Staging and Production Workflow with Vercel
+
+This workflow allows you to test new features on a live "preview" URL without affecting your main application (your MVP).
+
+**1. Set Up Your Branches:**
+*   **`main` (Production):** This branch contains the code for your stable, live MVP. In Vercel, you will set this as your "Production Branch".
+*   **`develop` or `pre-deployment` (Staging):** Create a new branch for your new features. This will be your testing or "staging" environment.
+    ```bash
+    # Create a new branch called 'develop' and switch to it
+    git checkout -b develop
+    ```
+
+**2. Push Changes to the Staging Branch:**
+*   Make your code changes, commit them, and then push them to your `develop` branch on GitHub.
+    ```bash
+    # After committing your changes...
+    git push origin develop
+    ```
+
+**3. Test on Vercel's Preview Deployment:**
+*   When you push to a non-production branch (like `develop`), Vercel automatically creates a **Preview Deployment**.
+*   In your Vercel dashboard, you'll see this new deployment with its own unique URL (e.g., `your-project-develop-a1b2c3.vercel.app`).
+*   Use this URL to thoroughly test your new features. Your main MVP on your production URL remains completely untouched.
+
+**4. Merge to Production:**
+*   Once you are confident that the changes on the `develop` branch are working perfectly, merge them into your `main` branch.
+    ```bash
+    # Switch back to the main branch
+    git checkout main
+
+    # Pull the latest changes from GitHub
+    git pull origin main
+
+    # Merge the 'develop' branch into 'main'
+    git merge develop
+    ```
+*   Push the updated `main` branch to GitHub:
+    ```bash
+    git push origin main
+    ```
+
+**5. Automatic Production Deployment:**
+*   Pushing to the `main` branch will automatically trigger a new **Production Deployment** on Vercel. Your live MVP will be updated with the new features.
