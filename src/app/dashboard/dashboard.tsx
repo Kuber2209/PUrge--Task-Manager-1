@@ -27,54 +27,73 @@ export function Dashboard() {
   
   useEffect(() => {
     if (!currentUser || typeof window === 'undefined') return;
-    
-    const requestPermissionAndSetupNotifications = async () => {
-        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-            console.log("This browser does not support desktop notification");
-            return;
-        }
 
+    const setupNotifications = async () => {
+      // 1. Check for browser support
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.log("Push notifications are not supported by this browser.");
+        return;
+      }
+
+      try {
+        const messaging = getMessaging(app);
+
+        // 2. Request permission
         if (Notification.permission === 'default') {
-            console.log('Requesting notification permission...');
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    await setupFcmToken();
-                } else {
-                    console.log('User denied notification permission.');
-                }
-            } catch (err) {
-                console.error('Error requesting notification permission', err);
-            }
-        } else if (Notification.permission === 'granted') {
-            await setupFcmToken();
+          console.log('Requesting notification permission...');
+          const permission = await Notification.requestPermission();
+          if (permission !== 'granted') {
+            console.log('User denied notification permission.');
+            return;
+          }
         }
-    }
-    
-    const setupFcmToken = async () => {
-        if (!currentUser) return;
-        try {
-            const messaging = getMessaging(app);
-            const currentToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
-            
-            if (currentToken) {
-                if (!currentUser.notificationTokens?.includes(currentToken)) {
-                    await updateUserProfile(currentUser.id, { 
-                        notificationTokens: arrayUnion(currentToken) 
-                    });
-                    toast({title: "Notifications Enabled!", description: "You'll now receive updates on this device."});
-                }
-            } else {
-                console.log('No registration token available. Request permission to generate one.');
-            }
-        } catch (err) {
-            console.error("Error getting notification token", err);
-            toast({ variant: 'destructive', title: "Notification Error", description: "Could not enable notifications. Check browser settings." });
-        }
-    };
 
+        if (Notification.permission === 'denied') {
+          console.log('Notification permission has been denied.');
+          return;
+        }
+
+        // 3. Get token
+        console.log('Getting FCM token...');
+        const currentToken = await getToken(messaging, {
+          vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+        });
+
+        // 4. Save token to Firestore
+        if (currentToken) {
+          console.log('FCM Token received:', currentToken);
+          if (!currentUser.notificationTokens?.includes(currentToken)) {
+            console.log('Saving new token to user profile...');
+            await updateUserProfile(currentUser.id, {
+              notificationTokens: arrayUnion(currentToken),
+            });
+            toast({
+              title: "Notifications Enabled!",
+              description: "You'll now receive updates on this device.",
+            });
+          } else {
+            console.log('This device token is already saved.');
+          }
+        } else {
+          console.log('No registration token available. Request permission to generate one.');
+        }
+      } catch (err) {
+        console.error("An error occurred while setting up notifications:", err);
+        let description = "Could not enable notifications.";
+        if (err instanceof Error && err.message.includes('permission-blocked')) {
+            description = "Notification permission is blocked. Please enable it in your browser settings.";
+        }
+        toast({
+          variant: 'destructive',
+          title: "Notification Setup Failed",
+          description: description,
+        });
+      }
+    };
+    
+    // Delay setup slightly to ensure everything is loaded
     const timer = setTimeout(() => {
-        requestPermissionAndSetupNotifications();
+      setupNotifications();
     }, 3000);
 
     return () => clearTimeout(timer);
@@ -98,9 +117,9 @@ export function Dashboard() {
       <Header />
       <main className="flex flex-1 flex-col">
         <Tabs defaultValue={defaultTab} className="w-full flex flex-col" key={tabsKey}>
-           <div className='px-4 md:px-8 bg-header border-b border-border'>
+           <div className='px-4 md:px-8 bg-card border-b border-border'>
              <div className="max-w-7xl mx-auto">
-                <TabsList className="flex flex-wrap h-auto">
+                <TabsList className="flex flex-wrap h-auto justify-start overflow-x-auto">
                     <TabsTrigger value="announcements">Announcements</TabsTrigger>
                     <TabsTrigger value="resources">Resources</TabsTrigger>
                     <TabsTrigger value="calendar">Calendar</TabsTrigger>

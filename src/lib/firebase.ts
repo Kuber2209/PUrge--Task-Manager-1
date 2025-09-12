@@ -3,7 +3,6 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { getMessaging } from "firebase/messaging";
 
 export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -21,8 +20,5 @@ const auth = getAuth(app);
 const db = getFirestore(app,"pu-tasker");
 const storage = getStorage(app);
 
-// Initialize Firebase Cloud Messaging and get a reference to the service
-const messaging = (typeof window !== 'undefined') ? getMessaging(app) : null;
 
-
-export { app, auth, db, storage, messaging };
+export { app, auth, db, storage };
