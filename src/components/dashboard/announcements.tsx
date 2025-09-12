@@ -345,12 +345,14 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
                 documents: finalData.documents,
                 authorId: currentUser.id,
                 createdAt: new Date().toISOString(),
-                audience: 'all',
+                audience: 'all', // Default audience
                 voiceNoteUrl: finalData.voiceNoteUrl,
                 isPinned: finalData.isPinned || false,
             };
             if(currentUser.role === 'SPT') {
                 newAnnouncementData.audience = data.audience as AnnouncementAudience;
+            } else {
+                newAnnouncementData.audience = 'all';
             }
             await createAnnouncement(newAnnouncementData);
             toast({
@@ -596,5 +598,7 @@ function AnnouncementActions({ announcement }: { announcement: Announcement }) {
         </>
     )
 }
+
+    
 
     
