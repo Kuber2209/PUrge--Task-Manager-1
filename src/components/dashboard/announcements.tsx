@@ -206,7 +206,7 @@ function AnnouncementCard({ announcement, users, canManage }: { announcement: An
 
 const announcementSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters long.'),
-  content: z.string().min(10, 'Content must be at least 10 characters long.'),
+  content: z.string().optional(),
   files: z.array(z.instanceof(File)).optional(),
   documents: z.array(z.custom<Document>()).optional(),
   audience: z.string().optional(),
@@ -341,19 +341,27 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
         } else {
             const newAnnouncementData: Omit<Announcement, 'id'> = {
                 title: finalData.title,
-                content: finalData.content,
-                documents: finalData.documents,
                 authorId: currentUser.id,
                 createdAt: new Date().toISOString(),
-                audience: 'all', // Default audience
-                voiceNoteUrl: finalData.voiceNoteUrl,
+                audience: 'all',
+                documents: finalData.documents,
                 isPinned: finalData.isPinned || false,
             };
+
+            if (finalData.content) {
+                newAnnouncementData.content = finalData.content;
+            } else {
+                 newAnnouncementData.content = ''; // Ensure content is not undefined
+            }
+
+            if (finalData.voiceNoteUrl) {
+                newAnnouncementData.voiceNoteUrl = finalData.voiceNoteUrl;
+            }
+            
             if(currentUser.role === 'SPT') {
                 newAnnouncementData.audience = data.audience as AnnouncementAudience;
-            } else {
-                newAnnouncementData.audience = 'all';
             }
+            
             await createAnnouncement(newAnnouncementData);
             toast({
                 title: 'Announcement Posted!',
@@ -422,7 +430,7 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
               {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="content">Content</Label>
+              <Label htmlFor="content">Content (Optional)</Label>
               <div className="flex items-start gap-2">
                   <Textarea id="content" {...register('content')} className="min-h-[150px] flex-1" />
                   <div className='flex flex-col gap-2'>
@@ -598,7 +606,3 @@ function AnnouncementActions({ announcement }: { announcement: Announcement }) {
         </>
     )
 }
-
-    
-
-    
