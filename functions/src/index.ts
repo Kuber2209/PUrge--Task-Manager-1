@@ -53,21 +53,18 @@ export const sendNewMessageNotification = functions.firestore
       return;
     }
     
-    const senderDoc = await db.doc(`users/${senderId}`).get();
-    const senderName = senderDoc.data()?.name || 'Someone';
-
-    // Construct the notification payload
+    // Construct the generic notification payload
     const payload = {
       notification: {
-        title: `New message in: ${taskData.title}`,
-        body: `${senderName}: ${messageData.text.substring(0, 100)}`, // Truncate long messages
+        title: "Update from PUrge",
+        body: "Open PUrge to see what's new.",
       },
       fcmOptions: {
-        link: `/task/${taskId}`,
+        link: `/dashboard`,
       },
     };
 
-    console.log(`Sending message notification to ${tokens.length} tokens.`);
+    console.log(`Sending generic message notification to ${tokens.length} tokens.`);
     return fcm.sendToDevice(tokens, payload);
   });
 
@@ -115,8 +112,8 @@ export const sendNewTaskNotification = functions.firestore
 
         const payload = {
             notification: {
-                title: "New Task Available",
-                body: `A new task has been posted: "${taskData.title}"`,
+                title: "Update from PUrge",
+                body: "Open PUrge to see what's new.",
             },
             fcmOptions: {
                 link: `/dashboard`, // Links to the main dashboard
@@ -164,13 +161,10 @@ export const sendNewAnnouncementNotification = functions.firestore
             return;
         }
 
-        const authorDoc = await db.doc(`users/${announcementData.authorId}`).get();
-        const authorName = authorDoc.data()?.name || 'Admin';
-
         const payload = {
             notification: {
-                title: `New Announcement: ${announcementData.title}`,
-                body: `Posted by ${authorName}: ${announcementData.content.substring(0, 100)}`,
+                title: "Update from PUrge",
+                body: "Open PUrge to see what's new.",
             },
             fcmOptions: {
                 link: `/dashboard`,
