@@ -19,8 +19,9 @@ export default function DashboardPage() {
     }
   }, [user, loading, router]);
 
-  // While the auth state is being checked, show a global loading indicator.
-  if (loading) {
+  // If loading, or if there's no user yet (and redirect is imminent), 
+  // show a loading state to prevent a flash of unauthenticated content.
+  if (loading || !user) {
     return (
        <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -32,22 +33,9 @@ export default function DashboardPage() {
   }
 
   // After loading, if we have a user object, we can render the dashboard.
-  if (user) {
-    return (
-        <main className="min-h-screen">
-            <Dashboard />
-        </main>
-    );
-  }
-  
-  // If `loading` is false and there is still no `user`, the useEffect is handling the redirect.
-  // Return a loading state to prevent rendering anything while redirecting.
   return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-muted-foreground">Redirecting...</p>
-        </div>
-      </div>
+      <main className="min-h-screen">
+          <Dashboard />
+      </main>
   );
 }
