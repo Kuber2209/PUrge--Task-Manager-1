@@ -1,3 +1,4 @@
+
 # PUrge BPHC - Development & Deployment Guide
 
 This guide contains four main sections:
@@ -18,6 +19,10 @@ Follow these steps to run the application on your computer. This is perfect for 
 
 **2. Install Prerequisites:**
 *   **Node.js:** If you don't have it, [download and install it from the official website](https://nodejs.org/). This also installs `npm`.
+*   **Firebase CLI:** You'll need this for deploying backend functions. Install it globally by running:
+    ```bash
+    npm install -g firebase-tools
+    ```
 
 **3. Install Project Dependencies:**
 *   Open a terminal (Command Prompt, PowerShell, or Terminal on Mac).
@@ -26,9 +31,9 @@ Follow these steps to run the application on your computer. This is perfect for 
     # Replace 'your-project-folder-name' with the actual folder name
     cd C:\Users\YourName\Desktop\your-project-folder-name
     ```
-*   Once inside the folder, run this command to install all the necessary packages:
+*   Once inside the folder, run this command to install all the necessary packages for both the web app and the backend functions:
     ```bash
-    npm install
+    npm install && (cd functions && npm install)
     ```
 
 **4. Start the Local Development Server:**
@@ -108,9 +113,31 @@ This sends your saved local commits to your central repository on GitHub.
 
 ### 🚀 Section 3: Deploy Your Application to the Web (Go Live)
 
+This section covers deploying your frontend (the Next.js app) and your backend (the Firebase Functions for notifications).
+
+#### 3.1: Deploying Firebase Functions (The "Sender")
+
+This is a **critical step** to make push notifications work. These functions run on Google's servers and send notifications when database events occur.
+
+1.  **Open Your Terminal:** Use a terminal on your local machine or a cloud environment like Google Cloud Shell.
+2.  **Navigate to Project Directory:** Use the `cd` command to go into your project's main folder.
+3.  **Log In to Firebase:**
+    ```bash
+    firebase login
+    ```
+    This will open a browser window for you to log in to your Google account.
+4.  **Select Your Firebase Project:** If you have multiple Firebase projects, you may need to select the correct one. You can use `firebase projects:list` to see available projects and `firebase use <your-project-id>` to select one.
+5.  **Deploy the Functions:** Run the following command. This specifically finds the code in the `functions` directory, builds it, and sends it to Firebase.
+    ```bash
+    firebase deploy --only functions
+    ```
+    After the command finishes, your backend notification logic will be live. You only need to re-run this command when you make changes to the files inside the `functions/src` directory.
+
+#### 3.2: Deploying the Web App (The "Receiver")
+
 This is the final step to make your application live on a public URL. The recommended approach is to connect your GitHub repository to a hosting provider like **Vercel** or **Firebase Hosting**.
 
-#### Recommended: Deploying with Vercel
+**Recommended: Deploying with Vercel**
 
 Vercel is designed for Next.js and makes deployment incredibly simple.
 
@@ -123,19 +150,10 @@ Vercel is designed for Next.js and makes deployment incredibly simple.
 
 **The Magic of Automatic Deployments:** Once set up, Vercel will automatically redeploy your website every time you `git push` a new commit to your `main` branch on GitHub.
 
-#### Alternative: Deploying with Firebase Hosting
+**Alternative: Deploying with Firebase Hosting**
 
-You can also deploy directly to Firebase.
-
-1.  **Install Firebase CLI:**
-    ```bash
-    npm install -g firebase-tools
-    ```
-2.  **Log in and Initialize Firebase:**
-    ```bash
-    firebase login
-    ```
-3.  **Build and Deploy:**
+1.  **Log in and Initialize Firebase** (if you haven't already from the functions step).
+2.  **Build and Deploy:**
     *   First, create an optimized production build of your app:
         ```bash
         npm run build
@@ -144,8 +162,7 @@ You can also deploy directly to Firebase.
         ```bash
         firebase deploy --only hosting
         ```
-
-After the command finishes, the terminal will display your **Public URL** (it will look something like `https://your-project-id.web.app`). Congratulations, your app is live!
+    After the command finishes, the terminal will display your **Public URL** (it will look something like `https://your-project-id.web.app`). Congratulations, your app is live!
 
 ---
 
