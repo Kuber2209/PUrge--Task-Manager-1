@@ -182,6 +182,7 @@ export const sendNewAnnouncementNotification = functions.firestore
 
 /**
  * Helper function to get notification tokens for a list of user IDs.
+ * @param {string[]} userIds An array of user IDs to fetch tokens for.
  */
 async function getTokensForUsers(userIds: string[]): Promise<string[]> {
   if (userIds.length === 0) return [];
