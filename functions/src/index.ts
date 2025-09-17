@@ -1,6 +1,6 @@
 import {onDocumentCreated} from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
-import type {Task, Announcement, User} from "../../src/lib/types";
+import type {Task, Announcement, User} from "$lib/types";
 
 admin.initializeApp();
 
