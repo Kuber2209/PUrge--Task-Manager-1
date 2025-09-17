@@ -1,8 +1,7 @@
-import * as functions from "firebase-functions";
+import { onDocumentCreated } from "firebase-functions/v2/firestore"; // <-- V2 Import
 import * as admin from "firebase-admin";
 import type { Task, Announcement, User } from "../../src/lib/types";
 
-// Initialize the Admin SDK. This is required to access Firestore and FCM.
 admin.initializeApp();
 
 const db = admin.firestore();
@@ -12,183 +11,182 @@ const fcm = admin.messaging();
  * Sends a notification when a new message is created
  * in a task's message thread.
  */
-export const sendNewMessageNotification = functions.firestore
-  .document("tasks/{taskId}/messages/{messageId}")
-  .onCreate(async (snapshot, context) => {
-    const messageData = snapshot.data();
-    if (!messageData) {
-      console.log("No message data found");
+// V2 SYNTAX: Uses onDocumentCreated and a single 'event' object
+export const sendNewMessageNotification = onDocumentCreated(
+  "tasks/{taskId}/messages/{messageId}",
+  async (event) => {
+    try {
+      const snapshot = event.data; // <-- Get snapshot from event.data
+      if (!snapshot) {
+        console.log("No message data snapshot found");
+        return;
+      }
+      const messageData = snapshot.data();
+      const senderId = messageData.userId;
+      const taskId = event.params.taskId; // <-- Get params from event.params
+
+      const taskDoc = await db.doc(`tasks/${taskId}`).get();
+      if (!taskDoc.exists) {
+        console.log("No task data found for taskId:", taskId);
+        return;
+      }
+      const taskData = taskDoc.data() as Task;
+
+      const recipientIds = new Set<string>([
+        ...taskData.assignedTo,
+        taskData.createdBy,
+      ]);
+      recipientIds.delete(senderId);
+
+      const recipients = Array.from(recipientIds);
+      if (recipients.length === 0) {
+        console.log("No recipients to notify.");
+        return;
+      }
+
+      const tokens = await getTokensForUsers(recipients);
+      if (tokens.length === 0) {
+        console.log("No notification tokens found for any recipients.");
+        return;
+      }
+
+      const payload = {
+        notification: {
+          title: "Update from PUrge",
+          body: "Open PUrge to see what's new.",
+        },
+        fcmOptions: { link: "/dashboard" },
+      };
+
+      console.log(`Sending message notification to ${tokens.length} tokens.`);
+      return fcm.sendToDevice(tokens, payload);
+    } catch (error) {
+      console.error("Error in sendNewMessageNotification:", error);
       return;
     }
-
-    const senderId = messageData.userId;
-    const taskId = context.params.taskId;
-
-    // Get the task document to find recipients and task title
-    const taskDoc = await db.doc(`tasks/${taskId}`).get();
-    const taskData = taskDoc.data() as Task | undefined;
-    if (!taskData) {
-      console.log("No task data found for taskId:", taskId);
-      return;
-    }
-
-    // Determine all recipients: creator and all assigned users,
-    const recipientIds = new Set<string>([
-      ...taskData.assignedTo,
-      taskData.createdBy,
-    ]);
-    recipientIds.delete(senderId); // Don't notify the per
-
-    const recipients = Array.from(recipientIds);
-    if (recipients.length === 0) {
-      console.log("No recipients to notify.");
-      return;
-    }
-
-    // Get the notification tokens for all recipients
-    const tokens = await getTokensForUsers(recipients);
-
-    if (tokens.length === 0) {
-      console.log("No notification tokens found for any recipients.");
-      return;
-    }
-    
-    // Construct the generic notification payload
-    const payload = {
-      notification: {
-        title: "Update from PUrge",
-        body: "Open PUrge to see what's new.",
-      },
-      fcmOptions: {
-        link: "/dashboard",
-      },
-    };
-
-    console.log(
-      `Sending generic message notification to ${tokens.length} tokens.`,
-    );
-    return fcm.sendToDevice(tokens, payload);
-  });
+  },
+);
 
 /**
  * Sends a notification when a new task is created.
  */
-export const sendNewTaskNotification = functions.firestore
-  .document("tasks/{taskId}")
-  .onCreate(async (snapshot) => {
-    const taskData = snapshot.data() as Task;
-    if (!taskData) {
-      console.log("New task data is empty, no notification sent.");
+// V2 SYNTAX
+export const sendNewTaskNotification = onDocumentCreated(
+  "tasks/{taskId}",
+  async (event) => {
+    try {
+      const snapshot = event.data;
+      if (!snapshot) {
+        console.log("New task snapshot is empty, no notification sent.");
+        return;
+      }
+      const taskData = snapshot.data() as Task;
+
+      const assignableRoles = taskData.assignableTo;
+      if (!assignableRoles || assignableRoles.length === 0) {
+        console.log("No assignable roles for new task, no notification sent.");
+        return;
+      }
+
+      const usersSnapshot = await db
+        .collection("users")
+        .where("role", "in", assignableRoles)
+        .get();
+
+      const recipientIds = usersSnapshot.docs
+        .map((doc) => (doc.data() as User).id)
+        .filter((id) => !taskData.assignedTo.includes(id));
+
+      if (recipientIds.length === 0) {
+        console.log("No users found for the assignable roles to notify.");
+        return;
+      }
+
+      const tokens = await getTokensForUsers(recipientIds);
+      if (tokens.length === 0) {
+        console.log("No notification tokens found for new task recipients.");
+        return;
+      }
+
+      const payload = {
+        notification: {
+          title: "Update from PUrge",
+          body: "Open PUrge to see what's new.",
+        },
+        fcmOptions: { link: "/dashboard" },
+      };
+
+      console.log(`Sending new task notification to ${tokens.length} tokens.`);
+      return fcm.sendToDevice(tokens, payload);
+    } catch (error) {
+      console.error("Error in sendNewTaskNotification:", error);
       return;
     }
-
-    // Determine recipients based on assignable roles
-    const assignableRoles = taskData.assignableTo;
-    if (!assignableRoles || assignableRoles.length === 0) {
-      console.log("No assignable roles for new task, no notification sent.");
-      return;
-    }
-
-    const usersSnapshot = await db
-      .collection("users")
-      .where("role", "in", assignableRoles)
-      .get();
-
-    const recipientIds = usersSnapshot.docs
-      .map((doc) => doc.data() as User)
-      .filter((user) => !user.isOnHoliday) // Exclude users on holiday
-      .map((user) => user.id)
-      // Exclude users who are already directly assigned on creation
-      .filter((id) => !taskData.assignedTo.includes(id));
-
-    if (recipientIds.length === 0) {
-      console.log("No users found for the assignable roles to notify.");
-      return;
-    }
-
-    const tokens = await getTokensForUsers(recipientIds);
-    if (tokens.length === 0) {
-      console.log("No notification tokens found for new task recipients.");
-      return;
-    }
-
-    const payload = {
-      notification: {
-        title: "Update from PUrge",
-        body: "Open PUrge to see what's new.",
-      },
-      fcmOptions: {
-        link: "/dashboard", // Links to the main dashboard
-      },
-    };
-
-    console.log(`Sending new task notification to ${tokens.length} tokens.`);
-    return fcm.sendToDevice(tokens, payload);
-  });
+  },
+);
 
 /**
  * Sends a notification when a new announcement is created.
  */
-export const sendNewAnnouncementNotification = functions.firestore
-  .document("announcements/{announcementId}")
-  .onCreate(async (snapshot) => {
-    const announcementData = snapshot.data() as Announcement;
-    if (!announcementData) {
+// V2 SYNTAX
+export const sendNewAnnouncementNotification = onDocumentCreated(
+  "announcements/{announcementId}",
+  async (event) => {
+    try {
+      const snapshot = event.data;
+      if (!snapshot) {
+        return;
+      }
+      const announcementData = snapshot.data() as Announcement;
+
+      let usersQuery;
+      if (announcementData.audience === "jpt-only") {
+        usersQuery = db.collection("users").where("role", "in", ["JPT", "SPT"]);
+      } else {
+        usersQuery = db.collection("users");
+      }
+
+      const usersSnapshot = await usersQuery.get();
+      const recipientIds = usersSnapshot.docs
+        .map((doc) => doc.id)
+        .filter((id) => id !== announcementData.authorId);
+
+      if (recipientIds.length === 0) {
+        console.log("No recipients for announcement.");
+        return;
+      }
+
+      const tokens = await getTokensForUsers(recipientIds);
+      if (tokens.length === 0) {
+        console.log("No notification tokens for announcement.");
+        return;
+      }
+
+      const payload = {
+        notification: {
+          title: "Update from PUrge",
+          body: "Open PUrge to see what's new.",
+        },
+        fcmOptions: { link: "/dashboard" },
+      };
+
+      console.log(`Sending announcement notification to ${tokens.length} tokens.`);
+      return fcm.sendToDevice(tokens, payload);
+    } catch (error) {
+      console.error("Error in sendNewAnnouncementNotification:", error);
       return;
     }
-
-    let usersQuery;
-    // JPTs and SPTs see everything
-    if (announcementData.audience === "jpt-only") {
-      usersQuery = db
-        .collection("users")
-        .where("role", "in", ["JPT", "SPT"]);
-    } else {
-      // 'all' goes to everyone
-      usersQuery = db.collection("users");
-    }
-
-    const usersSnapshot = await usersQuery.get();
-    const recipientIds = usersSnapshot.docs
-      .map((doc) => doc.id)
-      .filter((id) => id !== announcementData.authorId); // 
-
-    if (recipientIds.length === 0) {
-      console.log("No recipients for announcement.");
-      return;
-    }
-
-    const tokens = await getTokensForUsers(recipientIds);
-    if (tokens.length === 0) {
-      console.log("No notification tokens for announcement.");
-      return;
-    }
-
-    const payload = {
-      notification: {
-        title: "Update from PUrge",
-        body: "Open PUrge to see what's new.",
-      },
-      fcmOptions: {
-        link: "/dashboard",
-      },
-    };
-
-    console.log(
-      `Sending new announcement notification to ${tokens.length} tokens.`,
-    );
-    return fcm.sendToDevice(tokens, payload);
-  });
+  },
+);
 
 /**
  * Helper function to get notification tokens for a list of user IDs.
- * @param {string[]} userIds An array of user IDs to fetch tokens for.
+ * (This function does not need to change)
  */
 async function getTokensForUsers(userIds: string[]): Promise<string[]> {
   if (userIds.length === 0) return [];
 
   const tokens: string[] = [];
-  // Firestore 'in' queries are limited to 30 items.
   const chunks: string[][] = [];
   for (let i = 0; i < userIds.length; i += 30) {
     chunks.push(userIds.slice(i, i + 30));
@@ -203,15 +201,13 @@ async function getTokensForUsers(userIds: string[]): Promise<string[]> {
 
       tokensQuery.forEach((userDoc) => {
         const userData = userDoc.data() as User;
-        // Only include users who are not on holiday and have tokens
         const hasTokens =
-          userData.notificationTokens&&userData.notificationTokens.length>0;
+                   userData.notificationTokens&&userData.notificationTokens.length>0;
         if (hasTokens && !userData.isOnHoliday) {
-          // The '?? []' provides a fallback
           tokens.push(...(userData.notificationTokens ?? []));
         }
       });
     }
   }
-  return [...new Set(tokens)]; // Return unique tokens
+  return [...new Set(tokens)];
 }
