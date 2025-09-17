@@ -41,6 +41,6 @@ next-env.d.ts
 # studio
 .firebase/
 apphosting.yaml
-firebase.json
+
 
     

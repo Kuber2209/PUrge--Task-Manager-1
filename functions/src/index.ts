@@ -1,6 +1,6 @@
-import { onDocumentCreated } from "firebase-functions/v2/firestore"; // <-- V2 Import
+import {onDocumentCreated} from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
-import type { Task, Announcement, User } from "../../src/lib/types";
+import type {Task, Announcement, User} from "../../src/lib/types";
 
 admin.initializeApp();
 
@@ -11,19 +11,18 @@ const fcm = admin.messaging();
  * Sends a notification when a new message is created
  * in a task's message thread.
  */
-// V2 SYNTAX: Uses onDocumentCreated and a single 'event' object
 export const sendNewMessageNotification = onDocumentCreated(
   "tasks/{taskId}/messages/{messageId}",
   async (event) => {
     try {
-      const snapshot = event.data; // <-- Get snapshot from event.data
+      const snapshot = event.data;
       if (!snapshot) {
         console.log("No message data snapshot found");
         return;
       }
       const messageData = snapshot.data();
       const senderId = messageData.userId;
-      const taskId = event.params.taskId; // <-- Get params from event.params
+      const taskId = event.params.taskId;
 
       const taskDoc = await db.doc(`tasks/${taskId}`).get();
       if (!taskDoc.exists) {
@@ -55,7 +54,7 @@ export const sendNewMessageNotification = onDocumentCreated(
           title: "Update from PUrge",
           body: "Open PUrge to see what's new.",
         },
-        fcmOptions: { link: "/dashboard" },
+        fcmOptions: {link: "/dashboard"},
       };
 
       console.log(`Sending message notification to ${tokens.length} tokens.`);
@@ -70,7 +69,6 @@ export const sendNewMessageNotification = onDocumentCreated(
 /**
  * Sends a notification when a new task is created.
  */
-// V2 SYNTAX
 export const sendNewTaskNotification = onDocumentCreated(
   "tasks/{taskId}",
   async (event) => {
@@ -93,6 +91,8 @@ export const sendNewTaskNotification = onDocumentCreated(
         .where("role", "in", assignableRoles)
         .get();
 
+      // Improved: Redundant 'isOnHoliday' check is removed here because
+      // the getTokensForUsers function already handles it.
       const recipientIds = usersSnapshot.docs
         .map((doc) => (doc.data() as User).id)
         .filter((id) => !taskData.assignedTo.includes(id));
@@ -104,7 +104,7 @@ export const sendNewTaskNotification = onDocumentCreated(
 
       const tokens = await getTokensForUsers(recipientIds);
       if (tokens.length === 0) {
-        console.log("No notification tokens found for new task recipients.");
+        console.log("No notification tokens for new task recipients.");
         return;
       }
 
@@ -113,7 +113,7 @@ export const sendNewTaskNotification = onDocumentCreated(
           title: "Update from PUrge",
           body: "Open PUrge to see what's new.",
         },
-        fcmOptions: { link: "/dashboard" },
+        fcmOptions: {link: "/dashboard"},
       };
 
       console.log(`Sending new task notification to ${tokens.length} tokens.`);
@@ -128,7 +128,6 @@ export const sendNewTaskNotification = onDocumentCreated(
 /**
  * Sends a notification when a new announcement is created.
  */
-// V2 SYNTAX
 export const sendNewAnnouncementNotification = onDocumentCreated(
   "announcements/{announcementId}",
   async (event) => {
@@ -141,7 +140,9 @@ export const sendNewAnnouncementNotification = onDocumentCreated(
 
       let usersQuery;
       if (announcementData.audience === "jpt-only") {
-        usersQuery = db.collection("users").where("role", "in", ["JPT", "SPT"]);
+        usersQuery = db
+          .collection("users")
+          .where("role", "in", ["JPT", "SPT"]);
       } else {
         usersQuery = db.collection("users");
       }
@@ -167,10 +168,12 @@ export const sendNewAnnouncementNotification = onDocumentCreated(
           title: "Update from PUrge",
           body: "Open PUrge to see what's new.",
         },
-        fcmOptions: { link: "/dashboard" },
+        fcmOptions: {link: "/dashboard"},
       };
 
-      console.log(`Sending announcement notification to ${tokens.length} tokens.`);
+      console.log(
+        `Sending announcement notification to ${tokens.length} tokens.`,
+      );
       return fcm.sendToDevice(tokens, payload);
     } catch (error) {
       console.error("Error in sendNewAnnouncementNotification:", error);
@@ -181,12 +184,16 @@ export const sendNewAnnouncementNotification = onDocumentCreated(
 
 /**
  * Helper function to get notification tokens for a list of user IDs.
- * (This function does not need to change)
+ * @param {string[]} userIds An array of user IDs to fetch tokens for.
+ * @return {Promise<string[]>} A promise that resolves with an array of tokens.
  */
 async function getTokensForUsers(userIds: string[]): Promise<string[]> {
-  if (userIds.length === 0) return [];
+  if (userIds.length === 0) {
+    return [];
+  }
 
   const tokens: string[] = [];
+  // Firestore 'in' queries are limited to 30 items.
   const chunks: string[][] = [];
   for (let i = 0; i < userIds.length; i += 30) {
     chunks.push(userIds.slice(i, i + 30));
@@ -202,12 +209,13 @@ async function getTokensForUsers(userIds: string[]): Promise<string[]> {
       tokensQuery.forEach((userDoc) => {
         const userData = userDoc.data() as User;
         const hasTokens =
-                   userData.notificationTokens&&userData.notificationTokens.length>0;
+          userData.notificationTokens&&userData.notificationTokens.length>0;
         if (hasTokens && !userData.isOnHoliday) {
           tokens.push(...(userData.notificationTokens ?? []));
         }
       });
     }
   }
-  return [...new Set(tokens)];
+  return [...new Set(tokens)]; // Return unique tokens
 }
+
