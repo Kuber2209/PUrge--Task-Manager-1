@@ -60,7 +60,7 @@ export const sendNewMessageNotification = functions.firestore
         body: "Open PUrge to see what's new.",
       },
       fcmOptions: {
-        link: `/dashboard`,
+        link: "/dashboard",
       },
     };
 
@@ -118,7 +118,7 @@ export const sendNewTaskNotification = functions.firestore
         body: "Open PUrge to see what's new.",
       },
       fcmOptions: {
-        link: `/dashboard`, // Links to the main dashboard
+        link: "/dashboard", // Links to the main dashboard
       },
     };
 
@@ -170,7 +170,7 @@ export const sendNewAnnouncementNotification = functions.firestore
         body: "Open PUrge to see what's new.",
       },
       fcmOptions: {
-        link: `/dashboard`,
+        link: "/dashboard",
       },
     };
 
@@ -206,10 +206,10 @@ async function getTokensForUsers(userIds: string[]): Promise<string[]> {
         // Only include users who are not on holiday and have tokens
         const hasTokens =
           userData.notificationTokens&&userData.notificationTokens.length>0;
-          if (hasTokens && !userData.isOnHoliday) {
-            // The '?? []' provides a fallback
-            tokens.push(...(userData.notificationTokens ?? []));
-          }
+        if (hasTokens && !userData.isOnHoliday) {
+          // The '?? []' provides a fallback
+          tokens.push(...(userData.notificationTokens ?? []));
+        }
       });
     }
   }
