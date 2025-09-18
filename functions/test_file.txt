@@ -1,0 +1,1 @@
+this is a text file to check the push and pull for guthub between firebase studio and cloud termial shell.
