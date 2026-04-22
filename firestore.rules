@@ -2,41 +2,79 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function authEmail() {
+      return request.auth.token.email;
+    }
+
+    function isPrivilegedEmail() {
+      return isSignedIn() && authEmail() == 'f20240819@hyderabad.bits-pilani.ac.in';
+    }
+
+    function isWhitelistedAuthEmail() {
+      return isSignedIn() && exists(/databases/$(database)/documents/whitelist/$(authEmail()));
+    }
+
+    function isAllowedEmail() {
+      return isPrivilegedEmail() || isWhitelistedAuthEmail();
+    }
+
+    function userDocExists() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isActiveMember() {
+      return isAllowedEmail() && userDocExists() && userDoc().status == 'active';
+    }
   
-    // Helper function to check if a user is an admin (SPT or JPT)
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['SPT', 'JPT'];
+      return isActiveMember() && userDoc().role in ['SPT', 'JPT'];
     }
     
-    // Helper function to check if a user is an SPT
     function isSpt() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SPT';
+      return isActiveMember() && userDoc().role == 'SPT';
     }
 
-    // == USERS ==
-    // A user can be created by any authenticated user, as long as the document ID matches their UID.
-    // A user can read/update their own profile.
-    // An SPT admin can read/update any user's profile.
+    function validSelfCreate(userId) {
+      return request.resource.data.keys().hasOnly(['id', 'name', 'role', 'avatar', 'email', 'isOnHoliday', 'status']) &&
+        request.resource.data.id == userId &&
+        request.resource.data.email == authEmail() &&
+        request.resource.data.isOnHoliday == false &&
+        request.resource.data.status == 'active' &&
+        (
+          (isPrivilegedEmail() && request.resource.data.role == 'SPT') ||
+          (!isPrivilegedEmail() && request.resource.data.role == 'Associate')
+        );
+    }
+
+    function validSelfProfileUpdate() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly(['name', 'avatar', 'isOnHoliday']);
+    }
+
     match /users/{userId} {
-      allow read, update: if request.auth != null && (request.auth.uid == userId || isSpt());
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read: if isActiveMember() && (request.auth.uid == userId || isSpt());
+      allow create: if isSignedIn() && request.auth.uid == userId && isAllowedEmail() && validSelfCreate(userId);
+      allow update: if isSpt() || (isActiveMember() && request.auth.uid == userId && validSelfProfileUpdate());
     }
 
-    // == TASKS ==
-    // Tasks can be read by any logged-in user.
-    // Created by admins, updated by creator or assigned users.
     match /tasks/{taskId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && isAdmin();
-      allow update: if request.auth != null && (
+      allow read: if isActiveMember();
+      allow create: if isAdmin();
+      allow update: if isActiveMember() && (
         resource.data.createdBy == request.auth.uid || // Creator can update
         request.auth.uid in resource.data.assignedTo // Assigned users can update
       );
-      allow delete: if request.auth != null && isAdmin();
+      allow delete: if isAdmin();
       
-      // Messages subcollection within a task
       match /messages/{messageId} {
-        allow read, write: if request.auth != null && (
+        allow read, write: if isActiveMember() && (
           request.auth.uid == get(/databases/$(database)/documents/tasks/$(taskId)).data.createdBy ||
           request.auth.uid in get(/databases/$(database)/documents/tasks/$(taskId)).data.assignedTo ||
           isAdmin()
@@ -44,30 +82,23 @@ service cloud.firestore {
       }
     }
 
-    // == ANNOUNCEMENTS ==
-    // Can be read by any logged-in user, but only created/managed by admins.
     match /announcements/{announcementId} {
-      allow read: if request.auth != null;
-      allow create, update, delete: if request.auth != null && isAdmin();
+      allow read: if isActiveMember();
+      allow create, update, delete: if isAdmin();
     }
     
-    // == RESOURCES ==
-    // Can be read by any logged-in user, but only created/managed by admins.
     match /resources/{resourceId} {
-       allow read: if request.auth != null;
-       // Create, update, delete allowed for admins. Comments can be written by any authenticated user.
-       allow write: if request.auth != null && isAdmin();
-       allow update: if request.auth != null; // Allow any authenticated user to add comments
+       allow read: if isActiveMember();
+       allow create, delete: if isAdmin();
+       allow update: if isAdmin() || isActiveMember();
     }
 
-    // == ADMIN-ONLY COLLECTIONS ==
-    // Whitelist and Blacklist can only be accessed by SPTs
     match /whitelist/{email} {
-      allow read, write: if request.auth != null && isSpt();
+      allow read, write: if isSpt();
     }
     
     match /blacklist/{email} {
-       allow read, write: if request.auth != null && isSpt();
+       allow read, write: if isSpt();
     }
 
   }
