@@ -2,18 +2,57 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/hooks/use-auth';
 import { Header } from '@/components/dashboard/header';
-import { JptDashboard } from '@/components/dashboard/jpt-dashboard';
-import { AssociateDashboard } from '@/components/dashboard/associate-dashboard';
-import { AllProfilesDashboard } from '@/components/dashboard/all-profiles-dashboard';
-import { MyTasksDashboard } from '@/components/dashboard/my-tasks-dashboard';
-import { Announcements } from '@/components/dashboard/announcements';
-import { OngoingTasksDashboard } from '@/components/dashboard/ongoing-tasks-dashboard';
-import { CalendarView } from '@/components/dashboard/calendar-view';
-import { Resources } from '@/components/dashboard/resources';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+const TabPanelSkeleton = () => (
+  <div className="space-y-4">
+    <div className="h-8 w-56 rounded-md bg-muted animate-pulse" />
+    <div className="h-64 w-full rounded-xl bg-muted animate-pulse" />
+  </div>
+);
+
+const Announcements = dynamic(
+  () => import('@/components/dashboard/announcements').then((m) => m.Announcements),
+  { loading: () => <TabPanelSkeleton /> },
+);
+
+const Resources = dynamic(
+  () => import('@/components/dashboard/resources').then((m) => m.Resources),
+  { loading: () => <TabPanelSkeleton /> },
+);
+
+const CalendarView = dynamic(
+  () => import('@/components/dashboard/calendar-view').then((m) => m.CalendarView),
+  { loading: () => <TabPanelSkeleton /> },
+);
+
+const JptDashboard = dynamic(
+  () => import('@/components/dashboard/jpt-dashboard').then((m) => m.JptDashboard),
+  { loading: () => <TabPanelSkeleton /> },
+);
+
+const AssociateDashboard = dynamic(
+  () => import('@/components/dashboard/associate-dashboard').then((m) => m.AssociateDashboard),
+  { loading: () => <TabPanelSkeleton /> },
+);
+
+const MyTasksDashboard = dynamic(
+  () => import('@/components/dashboard/my-tasks-dashboard').then((m) => m.MyTasksDashboard),
+  { loading: () => <TabPanelSkeleton /> },
+);
+
+const OngoingTasksDashboard = dynamic(
+  () => import('@/components/dashboard/ongoing-tasks-dashboard').then((m) => m.OngoingTasksDashboard),
+  { loading: () => <TabPanelSkeleton /> },
+);
+
+const AllProfilesDashboard = dynamic(
+  () => import('@/components/dashboard/all-profiles-dashboard').then((m) => m.AllProfilesDashboard),
+  { loading: () => <TabPanelSkeleton /> },
+);
 
 export function Dashboard() {
   const { user: currentUser } = useAuth();

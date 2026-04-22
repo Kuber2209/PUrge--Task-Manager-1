@@ -12,10 +12,9 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // If auth is done checking and there's no user, redirect to the root
-    // which will handle sending them to the login page.
+    // If auth is done checking and there's no user, send them to login.
     if (!loading && !user) {
-      router.push('/');
+      router.replace('/login');
     }
   }, [user, loading, router]);
 

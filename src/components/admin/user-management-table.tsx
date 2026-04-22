@@ -145,14 +145,14 @@ export function UserManagementTable() {
                             <AlertDialogTrigger asChild>
                                 <DropdownMenuItem className="text-destructive">
                                     <UserX className="h-4 w-4 mr-2" />
-                                    Debar User
+                                    PUrge User
                                 </DropdownMenuItem>
                             </AlertDialogTrigger>
                         </DropdownMenuContent>
                     </DropdownMenu>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure you want to debar this user?</AlertDialogTitle>
+                            <AlertDialogTitle>Are you sure you want to PUrge this user?</AlertDialogTitle>
                             <AlertDialogDescription>
                                 This will add <strong className="text-foreground">{user.name} ({user.email})</strong> to the blacklist and immediately revoke their access. This action cannot be easily undone.
                             </AlertDialogDescription>
@@ -160,7 +160,7 @@ export function UserManagementTable() {
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction onClick={() => handleDebarUser(user)} className="bg-destructive hover:bg-destructive/90">
-                                Yes, Debar User
+                                Yes, PUrge User
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>

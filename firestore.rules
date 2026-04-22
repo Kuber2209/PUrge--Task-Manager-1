@@ -59,7 +59,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isActiveMember() && (request.auth.uid == userId || isSpt());
+      allow read: if isSignedIn() && (request.auth.uid == userId || isSpt());
       allow create: if isSignedIn() && request.auth.uid == userId && isAllowedEmail() && validSelfCreate(userId);
       allow update: if isSpt() || (isActiveMember() && request.auth.uid == userId && validSelfProfileUpdate());
     }
@@ -94,11 +94,13 @@ service cloud.firestore {
     }
 
     match /whitelist/{email} {
-      allow read, write: if isSpt();
+      allow get: if isSignedIn() && authEmail() == email;
+      allow list, write: if isSpt();
     }
     
     match /blacklist/{email} {
-       allow read, write: if isSpt();
+       allow get: if isSignedIn() && authEmail() == email;
+       allow list, write: if isSpt();
     }
 
   }

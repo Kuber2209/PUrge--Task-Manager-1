@@ -17,7 +17,7 @@ import {
   type User as FirebaseUser,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import type { User, UserRole } from "@/lib/types";
+import type { User } from "@/lib/types";
 import {
   createUserProfile,
   getUserProfile,
@@ -42,6 +42,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const ADMIN_EMAIL = "f20240819@hyderabad.bits-pilani.ac.in";
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+const getEmailAccessState = async (normalizedEmail: string, isAdmin: boolean) => {
+  if (isAdmin) {
+    return { isBlacklisted: false, isWhitelisted: true };
+  }
+
+  const [isBlacklisted, isWhitelisted] = await Promise.all([
+    isEmailBlacklisted(normalizedEmail),
+    isEmailWhitelisted(normalizedEmail),
+  ]);
+
+  return { isBlacklisted, isWhitelisted };
+};
 
 const handleBlacklistedAccess = async (email: string | null) => {
   if (!email) return;
@@ -71,19 +84,20 @@ async function fetchUserProfileWithRetry(
       const normalizedEmail = normalizeEmail(rawEmail);
       const isAdmin = normalizedEmail === ADMIN_EMAIL;
 
-      // Check for blacklisted status on every attempt
-      if ((await isEmailBlacklisted(normalizedEmail)) && !isAdmin) {
+      const [{ isBlacklisted, isWhitelisted }, userProfile] = await Promise.all([
+        getEmailAccessState(normalizedEmail, isAdmin),
+        getUserProfile(fbUser.uid),
+      ]);
+
+      if (isBlacklisted) {
         await handleBlacklistedAccess(normalizedEmail);
         return "blacklisted";
       }
 
-      const isWhitelisted = await isEmailWhitelisted(normalizedEmail);
-      if (!isAdmin && !isWhitelisted) {
+      if (!isWhitelisted) {
         await signOut(auth);
         return "denied";
       }
-
-      let userProfile = await getUserProfile(fbUser.uid);
 
       if (userProfile) {
         if (!isAdmin && userProfile.status !== "active") {
@@ -141,13 +155,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userProfile = await fetchUserProfileWithRetry(fbUser);
 
           if (userProfile === "blacklisted") {
-            router.push("/access-declined");
+            router.replace("/access-declined");
           } else if (userProfile === "denied") {
-            router.push("/access-declined");
+            router.replace("/access-declined");
           } else if (userProfile) {
             if (userProfile.status === "declined") {
               await signOut(auth);
-              router.push("/access-declined");
+              router.replace("/access-declined");
             } else {
               setUser(userProfile);
             }
@@ -187,33 +201,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logIn = async (email: string, pass: string) => {
     const normalizedEmail = normalizeEmail(email);
-    const isAdmin = normalizedEmail === ADMIN_EMAIL;
-    if ((await isEmailBlacklisted(normalizedEmail)) && !isAdmin) {
-      throw new Error("This email has been blacklisted.");
-    }
-    if (!isAdmin && !(await isEmailWhitelisted(normalizedEmail))) {
-      throw new Error(
-        "Access denied. Your email is not approved for this app.",
-      );
-    }
     return signInWithEmailAndPassword(auth, normalizedEmail, pass);
   };
 
   const signUp = async (email: string, pass: string, name: string) => {
     const normalizedEmail = normalizeEmail(email);
-    const isAdmin = normalizedEmail === ADMIN_EMAIL;
-    if ((await isEmailBlacklisted(normalizedEmail)) && !isAdmin) {
-      throw new Error(
-        "This email has been blacklisted and cannot be used to sign up.",
-      );
-    }
-    if (!isAdmin && !(await isEmailWhitelisted(normalizedEmail))) {
-      throw new Error(
-        "Access denied. Your email is not approved for this app.",
-      );
-    }
-
-    const userCredential = await createUserWithEmailAndPassword(
+    await createUserWithEmailAndPassword(
       auth,
       normalizedEmail,
       pass,
@@ -224,28 +217,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      const email = result.user.email;
-      if (!email) {
-        await signOut(auth);
-        throw new Error("Could not read email from Google account.");
-      }
-
-      const normalizedEmail = normalizeEmail(email);
-      const isAdmin = normalizedEmail === ADMIN_EMAIL;
-
-      if ((await isEmailBlacklisted(normalizedEmail)) && !isAdmin) {
-        await handleBlacklistedAccess(normalizedEmail);
-        throw new Error("This email has been blacklisted.");
-      }
-      if (!isAdmin && !(await isEmailWhitelisted(normalizedEmail))) {
-        await signOut(auth);
-        throw new Error(
-          "Access denied. Your email is not approved for this app.",
-        );
-      }
-      // `onAuthStateChanged` will handle profile creation and redirection.
-      return result;
+      // `onAuthStateChanged` handles profile creation, access checks, and redirection.
+      return await signInWithPopup(auth, provider);
     } catch (err: any) {
       // Rethrow the error to be caught by the UI
       throw err;
