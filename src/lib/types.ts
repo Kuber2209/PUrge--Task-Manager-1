@@ -6,19 +6,19 @@ export type AnnouncementAudience = 'all' | 'jpt-only';
 export type UserStatus = 'pending' | 'active' | 'declined';
 
 export interface User {
-  id: string; // This will be the Firebase Auth UID
+  id: string;
   name: string;
   role: UserRole;
   avatar: string;
   email: string;
   isOnHoliday?: boolean;
-  status?: UserStatus;
+  status: UserStatus;
 }
 
 export interface VoiceNote {
   id: string;
-  url: string; // URL to the audio file in Firebase Storage
-  transcript?: string; // Optional transcript
+  url: string; // URL to the audio file in R2 storage
+  transcript?: string;
   createdAt: string; // ISO string
   createdBy: string; // User ID
 }

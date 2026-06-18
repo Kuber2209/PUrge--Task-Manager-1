@@ -8,7 +8,7 @@ import React, {
   ReactNode,
 } from "react";
 import { supabase } from "@/lib/supabase";
-import type { Session, User as SupabaseAuthUser } from "@supabase/supabase-js";
+import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 import type { User } from "@/lib/types";
 import {
   createUserProfile,
@@ -22,7 +22,6 @@ import { useRouter } from "next/navigation";
 interface AuthContextType {
   user: User | null;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
-  /** The raw Supabase auth user (replaces the old firebaseUser). */
   supabaseUser: SupabaseAuthUser | null;
   loading: boolean;
   logIn: (email: string, pass: string) => Promise<any>;
@@ -33,92 +32,106 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_EMAIL = "f20240819@hyderabad.bits-pilani.ac.in";
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
-
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Fetches (or creates) the user's profile in Supabase.
- * Includes a retry mechanism for transient network issues.
+ * SESSION RESULT TYPES
+ * - User object  → active user, let them in
+ * - "pending"    → new signup, not whitelisted → show pending-approval page
+ * - "blacklisted"→ rejected → show access-declined page
+ * - "declined"   → admin manually declined → show access-declined page
+ * - null         → something went wrong
  */
+type SessionResult = User | "pending" | "blacklisted" | "declined" | null;
+
 async function fetchUserProfileWithRetry(
   sbUser: SupabaseAuthUser,
   retries = 3,
   delay = 2000,
-): Promise<User | null | "blacklisted" | "denied"> {
+): Promise<SessionResult> {
   for (let i = 0; i < retries; i++) {
     try {
       const rawEmail = sbUser.email;
-      if (!rawEmail) {
-        await supabase.auth.signOut();
-        return null;
-      }
+      if (!rawEmail) return null;
 
       const normalizedEmail = normalizeEmail(rawEmail);
-      const isAdmin = normalizedEmail === ADMIN_EMAIL;
 
-      const [{ isBlacklisted, isWhitelisted }, userProfile] = await Promise.all([
-        (async () => {
-          if (isAdmin) return { isBlacklisted: false, isWhitelisted: true };
-          const [bl, wl] = await Promise.all([
-            isEmailBlacklisted(normalizedEmail),
-            isEmailWhitelisted(normalizedEmail),
-          ]);
-          return { isBlacklisted: bl, isWhitelisted: wl };
-        })(),
+      // Run blacklist check, whitelist check, and profile fetch in parallel
+      const [isBlacklisted, isWhitelisted, userProfile] = await Promise.all([
+        isEmailBlacklisted(normalizedEmail),
+        isEmailWhitelisted(normalizedEmail),
         getUserProfile(sbUser.id),
       ]);
 
+      // ── 1. Blacklisted → always reject ────────────────────────────────────
       if (isBlacklisted) {
         await supabase.auth.signOut();
         return "blacklisted";
       }
 
-      if (!isWhitelisted) {
-        await supabase.auth.signOut();
-        return "denied";
-      }
-
+      // ── 2. Existing profile in DB ──────────────────────────────────────────
       if (userProfile) {
-        if (!isAdmin && userProfile.status !== "active") {
+        if (userProfile.status === "declined") {
           await supabase.auth.signOut();
-          return "denied";
+          return "declined";
         }
+        if (userProfile.status === "pending") {
+          // Keep them signed in so /pending-approval can show their email
+          return "pending";
+        }
+        // status === "active"
         return userProfile;
       }
 
-      // ── New user creation ──────────────────────────────────────────────────
-      const newUser: User = {
-        id: sbUser.id,
-        name:
-          sbUser.user_metadata?.full_name ||
-          sbUser.user_metadata?.name ||
-          "New User",
-        email: normalizedEmail,
-        role: isAdmin ? "SPT" : "Associate",
-        avatar:
-          sbUser.user_metadata?.avatar_url ||
-          sbUser.user_metadata?.picture ||
-          `https://i.pravatar.cc/150?u=${sbUser.id}`,
-        isOnHoliday: false,
-        status: "active",
-      };
+      // ── 3. No profile yet — first time signing in ──────────────────────────
+      const displayName =
+        sbUser.user_metadata?.full_name ||
+        sbUser.user_metadata?.name ||
+        sbUser.user_metadata?.display_name ||
+        "New User";
 
-      await createUserProfile(newUser);
-      return newUser;
+      const avatar =
+        sbUser.user_metadata?.avatar_url ||
+        sbUser.user_metadata?.picture ||
+        `https://i.pravatar.cc/150?u=${sbUser.id}`;
+
+      if (isWhitelisted) {
+        // Whitelisted → create as active, let them straight in
+        const newUser: User = {
+          id: sbUser.id,
+          name: displayName,
+          email: normalizedEmail,
+          role: "Associate",
+          avatar,
+          isOnHoliday: false,
+          status: "active",
+        };
+        await createUserProfile(newUser);
+        return newUser;
+      } else {
+        // Not whitelisted → create as pending → waitlist
+        const pendingUser: User = {
+          id: sbUser.id,
+          name: displayName,
+          email: normalizedEmail,
+          role: "Associate",
+          avatar,
+          isOnHoliday: false,
+          status: "pending",
+        };
+        await createUserProfile(pendingUser);
+        return "pending";
+      }
     } catch (error: any) {
       if (i < retries - 1) {
         console.warn(
-          `DB error, attempt ${i + 1} of ${retries}. Retrying in ${delay}ms...`,
+          `DB error on attempt ${i + 1}/${retries}. Retrying in ${delay}ms…`,
           error,
         );
         await sleep(delay);
       } else {
-        console.error(
-          "Failed to fetch or create user profile after multiple retries:",
-          error,
-        );
+        console.error("fetchUserProfileWithRetry: all retries failed", error);
         throw error;
       }
     }
@@ -133,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Get the initial session on mount
+    // Handle the initial session on mount
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         setSupabaseUser(session.user);
@@ -142,10 +155,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    // Listen for auth state changes (login, logout, token refresh, OAuth callback)
+    // Listen for subsequent auth state changes (login, logout, token refresh)
+    // Skip INITIAL_SESSION — it's already handled by getSession() above
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "INITIAL_SESSION") return;
       setLoading(true);
       if (session?.user) {
         setSupabaseUser(session.user);
@@ -163,31 +178,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleUserSession = async (sbUser: SupabaseAuthUser) => {
     try {
-      const userProfile = await fetchUserProfileWithRetry(sbUser);
+      const result = await fetchUserProfileWithRetry(sbUser);
 
-      if (userProfile === "blacklisted") {
-        router.replace("/access-declined");
-      } else if (userProfile === "denied") {
-        router.replace("/access-declined");
-      } else if (userProfile) {
-        if (userProfile.status === "declined") {
-          await supabase.auth.signOut();
+      switch (result) {
+        case "blacklisted":
+        case "declined":
           router.replace("/access-declined");
-        } else {
-          setUser(userProfile);
-        }
-      } else {
-        await supabase.auth.signOut();
-        setUser(null);
-        setSupabaseUser(null);
+          break;
+
+        case "pending":
+          // User is signed in to Supabase Auth but their app profile is pending.
+          // Keep them signed in so the page can show their email.
+          // Set a minimal user object so the pending page can display the email.
+          setUser({
+            id: sbUser.id,
+            name: sbUser.user_metadata?.full_name || "New User",
+            email: normalizeEmail(sbUser.email || ""),
+            role: "Associate",
+            avatar: `https://i.pravatar.cc/150?u=${sbUser.id}`,
+            isOnHoliday: false,
+            status: "pending",
+          });
+          router.replace("/pending-approval");
+          break;
+
+        case null:
+          await supabase.auth.signOut();
+          setUser(null);
+          setSupabaseUser(null);
+          break;
+
+        default:
+          // Full active user object
+          setUser(result);
+          break;
       }
     } catch (error: any) {
-      console.error("handleUserSession: Final error after retries:", error);
+      console.error("handleUserSession failed:", error);
       toast({
         variant: "destructive",
         title: "Login Failed",
         description:
-          "Could not connect to the database. Please check your internet connection and try again.",
+          "Could not connect to the database. Check your internet connection and try again.",
       });
       await supabase.auth.signOut();
       setUser(null);
@@ -204,13 +236,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data;
   };
 
-  const signUp = async (email: string, pass: string, _name: string) => {
+  const signUp = async (email: string, pass: string, name: string) => {
     const { data, error } = await supabase.auth.signUp({
       email: normalizeEmail(email),
       password: pass,
+      options: {
+        // Store name in auth metadata so fetchUserProfileWithRetry can use it
+        data: { full_name: name },
+      },
     });
     if (error) throw error;
-    // onAuthStateChange listener handles profile creation.
     return data;
   };
 

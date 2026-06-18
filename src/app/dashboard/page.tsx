@@ -12,15 +12,18 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // If auth is done checking and there's no user, send them to login.
     if (!loading && !user) {
       router.replace('/login');
+    } else if (!loading && user && user.status === 'pending') {
+      router.replace('/pending-approval');
+    } else if (!loading && user && user.status === 'declined') {
+      router.replace('/access-declined');
     }
   }, [user, loading, router]);
 
-  // If loading, or if there's no user yet (and redirect is imminent), 
-  // show a loading state to prevent a flash of unauthenticated content.
-  if (loading || !user) {
+  const isActiveUser = user && user.status === 'active';
+
+  if (loading || !isActiveUser) {
     return (
        <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">

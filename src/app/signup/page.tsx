@@ -69,7 +69,7 @@ export default function SignupPage() {
   });
   
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && user.status === 'active') {
       router.push('/dashboard');
     }
   }, [user, loading, router]);
@@ -106,16 +106,9 @@ export default function SignupPage() {
     setIsProcessing(true);
     try {
       await signInWithGoogle();
+      // Supabase OAuth is redirect-based — page will reload after callback
     } catch (err: any) {
-      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
-        toast({
-          variant: 'default',
-          title: 'Sign-up cancelled',
-          description: 'The sign-up window was closed.',
-        });
-      } else {
-        setError(err.message || 'An unknown error occurred during Google sign-up.');
-      }
+      setError(err.message || 'An unknown error occurred during Google sign-up.');
       setIsProcessing(false);
     }
   }

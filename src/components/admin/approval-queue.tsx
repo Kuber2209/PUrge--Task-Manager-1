@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { User } from '@/lib/types';
-import { getUsers, updateUserProfile, addEmailToBlacklist } from '@/services/db';
+import { getUsers, updateUserProfile, addEmailToBlacklist, addEmailToWhitelist } from '@/services/db';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -33,11 +33,15 @@ export function ApprovalQueue() {
     fetchPendingUsers();
   }, [fetchPendingUsers]);
 
-  const handleApprove = async (userId: string) => {
+  const handleApprove = async (user: User) => {
     try {
-      await updateUserProfile(userId, { status: 'active' });
-      toast({ title: 'User Approved', description: 'The user can now access the app.' });
-      fetchPendingUsers(); // Refresh the list
+      // Activate the profile AND whitelist their email so future logins work
+      await Promise.all([
+        updateUserProfile(user.id, { status: 'active' }),
+        addEmailToWhitelist(user.email),
+      ]);
+      toast({ title: 'User Approved', description: `${user.email} can now access the app.` });
+      fetchPendingUsers();
     } catch (error) {
       console.error("Failed to approve user:", error);
       toast({ variant: 'destructive', title: 'Error', description: 'Could not approve the user.' });
@@ -93,7 +97,7 @@ export function ApprovalQueue() {
               <TableCell className="text-muted-foreground">{user.email}</TableCell>
               <TableCell className="text-right">
                 <div className="flex gap-2 justify-end">
-                    <Button size="sm" variant="outline" className="bg-green-500/10 hover:bg-green-500/20 text-green-700" onClick={() => handleApprove(user.id)}>
+                    <Button size="sm" variant="outline" className="bg-green-500/10 hover:bg-green-500/20 text-green-700" onClick={() => handleApprove(user)}>
                         <Check className="h-4 w-4 mr-2" /> Approve
                     </Button>
                      <Button size="sm" variant="destructive" onClick={() => handleDecline(user)}>
