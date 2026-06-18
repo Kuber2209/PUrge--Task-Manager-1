@@ -43,42 +43,26 @@ export default function ProfilePage() {
             return;
         }
 
-        if (currentUser) {
-            setLoading(true);
-            const fetchProfileData = async () => {
-                try {
-                    // Fetch user profile and set up task listener concurrently
-                    const profilePromise = getUserProfile(userId);
-                    const unsubscribePromise = new Promise<() => void>((resolve) => {
-                        const unsubscribe = getTasksAssignedToUser(userId, (tasks) => {
-                            setAssignedTasks(tasks);
-                            resolve(unsubscribe); // Resolve the promise with the unsubscribe function
-                        });
-                    });
+        if (!currentUser) return;
 
-                    const [user, unsubscribe] = await Promise.all([profilePromise, unsubscribePromise]);
-                    
-                    setProfileUser(user);
-                    setLoading(false);
-                    
-                    return unsubscribe;
-                } catch (err) {
-                    console.error("Failed to load profile", err);
-                    setLoading(false);
-                    return () => {};
-                }
-            };
+        setLoading(true);
 
-            const unsubscribePromise = fetchProfileData();
+        // Fetch static profile data
+        getUserProfile(userId)
+            .then(user => setProfileUser(user))
+            .catch(err => console.error("Failed to load profile", err))
+            .finally(() => setLoading(false));
 
-            return () => {
-                unsubscribePromise.then(unsub => {
-                    if (unsub) {
-                        unsub();
-                    }
-                });
-            };
-        }
+        // Set up realtime task subscription — store unsubscribe in a variable
+        // immediately (synchronously) so cleanup can always call it safely.
+        const unsubscribe = getTasksAssignedToUser(userId, (tasks) => {
+            setAssignedTasks(tasks);
+        });
+
+        // Cleanup: unsubscribe the realtime channel when the component unmounts
+        return () => {
+            unsubscribe();
+        };
 
     }, [userId, authLoading, currentUser, router]);
 

@@ -1,5 +1,3 @@
-"use client";
-
 import { supabase } from "@/lib/supabase";
 import type { User, Task, Announcement, Resource } from "@/lib/types";
 
@@ -154,7 +152,7 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
     .from("users")
     .select("*")
     .eq("id", userId)
-    .single();
+    .maybeSingle(); // .single() throws 406 when no row found; .maybeSingle() returns null safely
   return data ? dbToUser(data) : null;
 };
 
@@ -303,14 +301,14 @@ export const getTask = (
       .from("tasks")
       .select("*")
       .eq("id", taskId)
-      .single();
+      .maybeSingle();
     callback(data ? dbToTask(data) : null);
   };
 
   fetchTask();
 
   const channel = supabase
-    .channel(`task_${taskId}`)
+    .channel(`task_${taskId}_${Math.random()}`)
     .on(
       "postgres_changes",
       {
@@ -358,7 +356,7 @@ export const getCalendarTasksForUser = (
   fetchTasks();
 
   const channel = supabase
-    .channel(`calendar_tasks_${userId}`)
+    .channel(`calendar_tasks_${userId}_${Math.random()}`)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "tasks" },
@@ -387,7 +385,7 @@ export const getTasksCreatedByUser = (
   fetchTasks();
 
   const channel = supabase
-    .channel(`tasks_created_${userId}`)
+    .channel(`tasks_created_${userId}_${Math.random()}`)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "tasks" },
@@ -421,7 +419,7 @@ export const getTasksAssignedToUser = (
   fetchTasks();
 
   const channel = supabase
-    .channel(`tasks_assigned_${userId}`)
+    .channel(`tasks_assigned_${userId}_${Math.random()}`)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "tasks" },
@@ -454,7 +452,7 @@ export const getOpenTasks = (
   fetchTasks();
 
   const channel = supabase
-    .channel("open_tasks")
+    .channel(`open_tasks_${Math.random()}`)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "tasks" },
@@ -487,7 +485,7 @@ export const getOngoingTasks = (
   fetchTasks();
 
   const channel = supabase
-    .channel("ongoing_tasks")
+    .channel(`ongoing_tasks_${Math.random()}`)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "tasks" },
@@ -574,7 +572,7 @@ export const getAnnouncements = (
   fetchAnnouncements();
 
   const channel = supabase
-    .channel("announcements")
+    .channel(`announcements_${Math.random()}`)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "announcements" },
@@ -636,7 +634,7 @@ export const getResources = (
   fetchResources();
 
   const channel = supabase
-    .channel("resources")
+    .channel(`resources_${Math.random()}`)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "resources" },
