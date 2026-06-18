@@ -6,9 +6,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Plus, Wand2, Minus, Calendar as CalendarIcon, User, X, Mic, Square, Pause, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Minus, Calendar as CalendarIcon, User, X, Mic, Square, Pause, Trash2 } from 'lucide-react';
 import type { Task, AssignableRole, User as UserType, Document } from '@/lib/types';
-import { suggestTaskTags } from '@/ai/flows/suggest-task-tags';
 import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
@@ -77,7 +76,6 @@ type RecordingStatus = 'idle' | 'recording' | 'paused';
 export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTaskFormProps) {
   const { user: currentUser } = useAuth();
   const [open, setOpen] = useState(false);
-  const [isSuggesting, setIsSuggesting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [allUsers, setAllUsers] = useState<UserType[]>([]);
@@ -159,31 +157,7 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
     if (!assignableTo.includes('Associate')) setValue('requiredAssociates', 0);
   }, [assignableTo, setValue]);
 
-  const handleSuggestTags = async () => {
-    if (!description || description.length < 10) {
-      toast({
-        variant: 'destructive',
-        title: 'Description too short',
-        description: 'Please provide a longer description to suggest tags.',
-      });
-      return;
-    }
-    setIsSuggesting(true);
-    try {
-      const result = await suggestTaskTags({ taskDescription: description });
-      const newTags = [...new Set([...tags, ...result.tags])];
-      setValue('tags', newTags.slice(0, 5)); // Limit to 5 tags
-    } catch (error) {
-      console.error('Error suggesting tags:', error);
-      toast({
-        variant: 'destructive',
-        title: 'AI Error',
-        description: 'Could not suggest tags at this time.',
-      });
-    } finally {
-      setIsSuggesting(false);
-    }
-  };
+
   
   const handleAddTag = () => {
     const trimmedTag = tagInput.trim();
@@ -609,9 +583,6 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
                             placeholder="Add a tag and press Enter"
                         />
                         <Button type="button" variant="outline" onClick={handleAddTag}>Add</Button>
-                        <Button type="button" variant="ghost" size="icon" onClick={handleSuggestTags} disabled={isSuggesting} aria-label="Suggest Tags">
-                            {isSuggesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                        </Button>
                     </div>
                     {errors.tags && <p className="text-sm text-destructive">{errors.tags.message}</p>}
                     <div className="flex flex-wrap gap-2 mt-2">
