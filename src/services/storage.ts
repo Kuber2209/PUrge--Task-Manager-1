@@ -1,5 +1,7 @@
 "use client";
 
+import { supabase } from "@/lib/supabase";
+
 /**
  * Uploads a file to Cloudflare R2 via a server-side presigned URL.
  * The function signature is identical to the old Firebase Storage version.
@@ -13,11 +15,18 @@ export const uploadFile = async (file: File, path: string): Promise<string> => {
 
   const fileName = `${path}/${Date.now()}_${file.name}`;
 
+  // Get active session token to authenticate request server-side
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
   // Step 1: Ask our server-side API route to generate a presigned upload URL.
   // R2 secrets never leave the server.
   const res = await fetch("/api/storage/upload-url", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      ...(token ? { "Authorization": `Bearer ${token}` } : {})
+    },
     body: JSON.stringify({ fileName, contentType: file.type }),
   });
 
