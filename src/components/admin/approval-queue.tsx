@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { User } from '@/lib/types';
-import { getUsers, updateUserProfile, addEmailToBlacklist } from '@/services/firestore';
+import { getUsers, updateUserProfile, addEmailToBlacklist } from '@/services/db';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

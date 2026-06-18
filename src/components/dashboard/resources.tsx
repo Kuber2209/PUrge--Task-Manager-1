@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Link2, Plus, Loader2, MoreVertical, Edit, Trash2, FileText, Download, Send, MessageSquare, BookMarked, ChevronDown, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { createResource, getResources, getUsers, updateResource, deleteResource } from '@/services/firestore';
+import { createResource, getResources, getUsers, updateResource, deleteResource } from '@/services/db';
 import { uploadFile } from '@/services/storage';
 import { Skeleton } from '../ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';

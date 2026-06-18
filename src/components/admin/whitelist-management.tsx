@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { addEmailToWhitelist, removeEmailFromWhitelist, getWhitelist } from '@/services/firestore';
+import { addEmailToWhitelist, removeEmailFromWhitelist, getWhitelist } from '@/services/db';
 import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 

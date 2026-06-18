@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/use-auth';
-import { getUserProfile, getTasksAssignedToUser, updateUserProfile } from '@/services/firestore';
+import { getUserProfile, getTasksAssignedToUser, updateUserProfile } from '@/services/db';
 import { uploadFile } from '@/services/storage';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';

@@ -23,7 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
-import { createTask, updateTask, getUsers } from '@/services/firestore';
+import { createTask, updateTask, getUsers } from '@/services/db';
 import { ScrollArea } from '../ui/scroll-area';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';

@@ -9,7 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle2, CircleDotDashed } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { getTasksAssignedToUser, getUsers, updateTask } from '@/services/firestore';
+import { getTasksAssignedToUser, getUsers, updateTask } from '@/services/db';
 import { Skeleton } from '../ui/skeleton';
 
 

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import type { User, Task } from '@/lib/types';
-import { getUsers, getTasks } from '@/services/firestore';
+import { getUsers, getTasks } from '@/services/db';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowRight, Search } from 'lucide-react';

@@ -12,7 +12,7 @@ import { format, formatDistanceToNow, isPast } from 'date-fns';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
-import { updateTask, deleteTask } from '@/services/firestore';
+import { updateTask, deleteTask } from '@/services/db';
 import { useToast } from '@/hooks/use-toast';
 import { useMemo, useState } from 'react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';

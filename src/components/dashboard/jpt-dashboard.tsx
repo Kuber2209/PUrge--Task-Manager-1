@@ -6,7 +6,7 @@ import type { User, Task } from '@/lib/types';
 import { CreateTaskForm } from './create-task-form';
 import { TaskList } from './task-list';
 import { useAuth } from '@/hooks/use-auth';
-import { getTasksCreatedByUser, getUsers } from '@/services/firestore';
+import { getTasksCreatedByUser, getUsers } from '@/services/db';
 import { Skeleton } from '../ui/skeleton';
 
 export function JptDashboard() {

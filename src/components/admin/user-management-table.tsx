@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import type { User, UserRole } from '@/lib/types';
-import { getUsers, updateUserProfile, debarUser } from '@/services/firestore';
+import { getUsers, updateUserProfile, debarUser } from '@/services/db';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

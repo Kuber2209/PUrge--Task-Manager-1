@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Task } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
-import { getCalendarTasksForUser } from '@/services/firestore';
+import { getCalendarTasksForUser } from '@/services/db';
 import { format, isSameDay, isPast, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday } from 'date-fns';
 import { Skeleton } from '../ui/skeleton';
 import { cn } from '@/lib/utils';

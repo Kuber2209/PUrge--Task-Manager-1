@@ -7,30 +7,23 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import {
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  GoogleAuthProvider,
-  signInWithPopup,
-  type User as FirebaseUser,
-} from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
+import type { Session, User as SupabaseAuthUser } from "@supabase/supabase-js";
 import type { User } from "@/lib/types";
 import {
   createUserProfile,
   getUserProfile,
   isEmailBlacklisted,
   isEmailWhitelisted,
-} from "@/services/firestore";
+} from "@/services/db";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
 interface AuthContextType {
   user: User | null;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
-  firebaseUser: FirebaseUser | null;
+  /** The raw Supabase auth user (replaces the old firebaseUser). */
+  supabaseUser: SupabaseAuthUser | null;
   loading: boolean;
   logIn: (email: string, pass: string) => Promise<any>;
   signUp: (email: string, pass: string, name: string) => Promise<any>;
@@ -43,41 +36,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const ADMIN_EMAIL = "f20240819@hyderabad.bits-pilani.ac.in";
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
-const getEmailAccessState = async (normalizedEmail: string, isAdmin: boolean) => {
-  if (isAdmin) {
-    return { isBlacklisted: false, isWhitelisted: true };
-  }
-
-  const [isBlacklisted, isWhitelisted] = await Promise.all([
-    isEmailBlacklisted(normalizedEmail),
-    isEmailWhitelisted(normalizedEmail),
-  ]);
-
-  return { isBlacklisted, isWhitelisted };
-};
-
-const handleBlacklistedAccess = async (email: string | null) => {
-  if (!email) return;
-  await signOut(auth);
-};
-
-// Helper function to pause execution, useful for retries
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Fetches the user profile from Firestore. If the user doesn't exist, it creates a new one.
- * Includes a retry mechanism to handle transient network issues on initial load.
+ * Fetches (or creates) the user's profile in Supabase.
+ * Includes a retry mechanism for transient network issues.
  */
 async function fetchUserProfileWithRetry(
-  fbUser: FirebaseUser,
+  sbUser: SupabaseAuthUser,
   retries = 3,
   delay = 2000,
 ): Promise<User | null | "blacklisted" | "denied"> {
   for (let i = 0; i < retries; i++) {
     try {
-      const rawEmail = fbUser.email;
+      const rawEmail = sbUser.email;
       if (!rawEmail) {
-        await signOut(auth);
+        await supabase.auth.signOut();
         return null;
       }
 
@@ -85,50 +59,62 @@ async function fetchUserProfileWithRetry(
       const isAdmin = normalizedEmail === ADMIN_EMAIL;
 
       const [{ isBlacklisted, isWhitelisted }, userProfile] = await Promise.all([
-        getEmailAccessState(normalizedEmail, isAdmin),
-        getUserProfile(fbUser.uid),
+        (async () => {
+          if (isAdmin) return { isBlacklisted: false, isWhitelisted: true };
+          const [bl, wl] = await Promise.all([
+            isEmailBlacklisted(normalizedEmail),
+            isEmailWhitelisted(normalizedEmail),
+          ]);
+          return { isBlacklisted: bl, isWhitelisted: wl };
+        })(),
+        getUserProfile(sbUser.id),
       ]);
 
       if (isBlacklisted) {
-        await handleBlacklistedAccess(normalizedEmail);
+        await supabase.auth.signOut();
         return "blacklisted";
       }
 
       if (!isWhitelisted) {
-        await signOut(auth);
+        await supabase.auth.signOut();
         return "denied";
       }
 
       if (userProfile) {
         if (!isAdmin && userProfile.status !== "active") {
-          await signOut(auth);
+          await supabase.auth.signOut();
           return "denied";
         }
-        return userProfile; // User profile found, return it.
+        return userProfile;
       }
 
-      // --- New User Creation Flow ---
+      // ── New user creation ──────────────────────────────────────────────────
       const newUser: User = {
-        id: fbUser.uid,
-        name: fbUser.displayName || "New User",
+        id: sbUser.id,
+        name:
+          sbUser.user_metadata?.full_name ||
+          sbUser.user_metadata?.name ||
+          "New User",
         email: normalizedEmail,
         role: isAdmin ? "SPT" : "Associate",
-        avatar: fbUser.photoURL || `https://i.pravatar.cc/150?u=${fbUser.uid}`,
+        avatar:
+          sbUser.user_metadata?.avatar_url ||
+          sbUser.user_metadata?.picture ||
+          `https://i.pravatar.cc/150?u=${sbUser.id}`,
         isOnHoliday: false,
         status: "active",
       };
 
       await createUserProfile(newUser);
-      return newUser; // Return the newly created user.
+      return newUser;
     } catch (error: any) {
-      // Only retry on the specific 'unavailable' (offline) error code from Firestore.
-      if (error.code === "unavailable" && i < retries - 1) {
+      if (i < retries - 1) {
         console.warn(
-          `Firestore offline, attempt ${i + 1} of ${retries}. Retrying in ${delay}ms...`,
+          `DB error, attempt ${i + 1} of ${retries}. Retrying in ${delay}ms...`,
+          error,
         );
         await sleep(delay);
       } else {
-        // For any other error, or on the final retry attempt, throw the error to be caught by the calling function.
         console.error(
           "Failed to fetch or create user profile after multiple retries:",
           error,
@@ -137,104 +123,118 @@ async function fetchUserProfileWithRetry(
       }
     }
   }
-  return null; // Should be unreachable if retries > 0
+  return null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseAuthUser | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setLoading(true);
-      if (fbUser) {
-        try {
-          setFirebaseUser(fbUser);
-          const userProfile = await fetchUserProfileWithRetry(fbUser);
-
-          if (userProfile === "blacklisted") {
-            router.replace("/access-declined");
-          } else if (userProfile === "denied") {
-            router.replace("/access-declined");
-          } else if (userProfile) {
-            if (userProfile.status === "declined") {
-              await signOut(auth);
-              router.replace("/access-declined");
-            } else {
-              setUser(userProfile);
-            }
-          } else {
-            // This case handles a null return from the retry function, which implies a failure.
-            await signOut(auth);
-            setUser(null);
-            setFirebaseUser(null);
-          }
-        } catch (error: any) {
-          // This block catches the final error thrown by fetchUserProfileWithRetry
-          console.error(
-            "onAuthStateChanged: Final error after retries:",
-            error,
-          );
-          toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description:
-              "Could not connect to the database. Please check your internet connection and try again.",
-          });
-          await signOut(auth);
-          setUser(null);
-          setFirebaseUser(null);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setFirebaseUser(null);
-        setUser(null);
-        setLoading(false);
+    // Get the initial session on mount
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        setSupabaseUser(session.user);
+        await handleUserSession(session.user);
       }
+      setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [router]);
+    // Listen for auth state changes (login, logout, token refresh, OAuth callback)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setLoading(true);
+      if (session?.user) {
+        setSupabaseUser(session.user);
+        await handleUserSession(session.user);
+      } else {
+        setSupabaseUser(null);
+        setUser(null);
+      }
+      setLoading(false);
+    });
 
-  const logIn = async (email: string, pass: string) => {
-    const normalizedEmail = normalizeEmail(email);
-    return signInWithEmailAndPassword(auth, normalizedEmail, pass);
-  };
+    return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const signUp = async (email: string, pass: string, name: string) => {
-    const normalizedEmail = normalizeEmail(email);
-    await createUserWithEmailAndPassword(
-      auth,
-      normalizedEmail,
-      pass,
-    );
-    // onAuthStateChanged listener will handle profile creation.
-  };
-
-  const signInWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
+  const handleUserSession = async (sbUser: SupabaseAuthUser) => {
     try {
-      // `onAuthStateChanged` handles profile creation, access checks, and redirection.
-      return await signInWithPopup(auth, provider);
-    } catch (err: any) {
-      // Rethrow the error to be caught by the UI
-      throw err;
+      const userProfile = await fetchUserProfileWithRetry(sbUser);
+
+      if (userProfile === "blacklisted") {
+        router.replace("/access-declined");
+      } else if (userProfile === "denied") {
+        router.replace("/access-declined");
+      } else if (userProfile) {
+        if (userProfile.status === "declined") {
+          await supabase.auth.signOut();
+          router.replace("/access-declined");
+        } else {
+          setUser(userProfile);
+        }
+      } else {
+        await supabase.auth.signOut();
+        setUser(null);
+        setSupabaseUser(null);
+      }
+    } catch (error: any) {
+      console.error("handleUserSession: Final error after retries:", error);
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description:
+          "Could not connect to the database. Please check your internet connection and try again.",
+      });
+      await supabase.auth.signOut();
+      setUser(null);
+      setSupabaseUser(null);
     }
   };
 
-  const logOut = async () => {
-    await signOut(auth);
-    setUser(null);
-    setFirebaseUser(null);
+  const logIn = async (email: string, pass: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizeEmail(email),
+      password: pass,
+    });
+    if (error) throw error;
+    return data;
   };
 
-  const value = {
+  const signUp = async (email: string, pass: string, _name: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email: normalizeEmail(email),
+      password: pass,
+    });
+    if (error) throw error;
+    // onAuthStateChange listener handles profile creation.
+    return data;
+  };
+
+  const signInWithGoogle = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+    if (error) throw error;
+    return data;
+  };
+
+  const logOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSupabaseUser(null);
+  };
+
+  const value: AuthContextType = {
     user,
     setUser,
-    firebaseUser,
+    supabaseUser,
     loading,
     logIn,
     signUp,
