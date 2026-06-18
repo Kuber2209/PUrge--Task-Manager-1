@@ -43,19 +43,23 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * - "declined"   → admin manually declined → show access-declined page
  * - null         → something went wrong
  */
-type SessionResult = User | "pending" | "blacklisted" | "declined" | null;
+type SessionResult = User | "pending" | "blacklisted" | "declined" | "non-bits-email" | null;
 
 async function fetchUserProfileWithRetry(
   sbUser: SupabaseAuthUser,
   retries = 3,
   delay = 2000,
 ): Promise<SessionResult> {
+  const rawEmail = sbUser.email;
+  if (!rawEmail) return null;
+
+  const normalizedEmail = normalizeEmail(rawEmail);
+  if (!normalizedEmail.endsWith('bits-pilani.ac.in')) {
+    return "non-bits-email";
+  }
+
   for (let i = 0; i < retries; i++) {
     try {
-      const rawEmail = sbUser.email;
-      if (!rawEmail) return null;
-
-      const normalizedEmail = normalizeEmail(rawEmail);
 
       // Run blacklist check, whitelist check, and profile fetch in parallel
       const [isBlacklisted, isWhitelisted, userProfile] = await Promise.all([
@@ -181,6 +185,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await fetchUserProfileWithRetry(sbUser);
 
       switch (result) {
+        case "non-bits-email":
+          await supabase.auth.signOut();
+          setUser(null);
+          setSupabaseUser(null);
+          toast({
+            variant: "destructive",
+            title: "Access Denied",
+            description: "Only BITS Pilani email addresses are allowed.",
+          });
+          router.replace("/login");
+          break;
+
         case "blacklisted":
         case "declined":
           router.replace("/access-declined");

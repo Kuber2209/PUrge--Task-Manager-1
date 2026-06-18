@@ -20,7 +20,10 @@ import { LandingHeader } from '@/components/landing-header';
 
 const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters long.'),
-  email: z.string().email('Invalid email address.'),
+  email: z.string().email('Invalid email address.').refine(
+    (email) => email.toLowerCase().endsWith('bits-pilani.ac.in'),
+    { message: 'Only BITS Pilani email addresses are allowed.' }
+  ),
   password: z.string().min(6, 'Password must be at least 6 characters long.'),
 });
 
