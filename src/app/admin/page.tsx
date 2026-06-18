@@ -13,8 +13,6 @@ import { ApprovalQueue } from '@/components/admin/approval-queue';
 import { BlacklistManagement } from '@/components/admin/blacklist-management';
 import { WhitelistManagement } from '@/components/admin/whitelist-management';
 
-const ADMIN_EMAIL = 'f20240819@hyderabad.bits-pilani.ac.in';
-
 export default function AdminPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -29,7 +27,7 @@ export default function AdminPage() {
     return <div className="flex min-h-screen items-center justify-center">Verifying credentials...</div>;
   }
 
-  if (user?.email !== ADMIN_EMAIL) {
+  if (user?.role !== 'SPT') {
     return (
       <div className="flex min-h-screen w-full flex-col">
         <Header />
