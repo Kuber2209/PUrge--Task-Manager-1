@@ -19,7 +19,6 @@ function TieIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-const ADMIN_EMAIL = 'f20240819@hyderabad.bits-pilani.ac.in';
 
 export function Header() {
   const { user, logOut } = useAuth();
@@ -31,7 +30,7 @@ export function Header() {
     router.push('/login');
   };
 
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdmin = user?.role === 'SPT';
   const isAdminPage = pathname === '/admin';
   
   return (
