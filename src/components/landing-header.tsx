@@ -3,11 +3,17 @@
 import Link from 'next/link';
 import { ThemeToggle } from './theme-toggle';
 
-function TieIcon(props: React.SVGProps<SVGSVGElement>) {
+function LogoIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M12 22s-4-4-4-9V3h8v10s-4 4-4 9z"/>
-      <path d="M10.5 7.5a1.5 1.5 0 0 1 3 0"/>
+      <defs>
+        <linearGradient id="logo-grad-landing" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#329992" />
+          <stop offset="100%" stopColor="#663399" />
+        </linearGradient>
+      </defs>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="url(#logo-grad-landing)" fill="url(#logo-grad-landing)" fillOpacity="0.15" strokeWidth="2" />
+      <path d="m9 11 2 2 4-4" stroke="url(#logo-grad-landing)" strokeWidth="2.5" />
     </svg>
   );
 }
@@ -35,7 +41,7 @@ export function LandingHeader() {
                 <div className="relative flex items-center gap-x-4">
                     <div className="order-1 flex grow basis-0">
                         <Link href="/login" className="order-1 flex items-center gap-2 font-headline text-xl font-bold">
-                            <TieIcon className="h-7 w-7 text-primary" />
+                            <LogoIcon className="h-7 w-7" />
                             <span>PUrge BPHC</span>
                         </Link>
                     </div>
