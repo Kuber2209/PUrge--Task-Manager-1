@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import type { User, Task } from '@/lib/types';
+import type { User, Task, AssignableRole } from '@/lib/types';
 import { TaskList } from './task-list';
 import { useAuth } from '@/hooks/use-auth';
 import { getOpenTasks, getUsers } from '@/services/db';
@@ -35,8 +35,9 @@ export function AssociateDashboard() {
       // User must not already be assigned
       if (task.assignedTo.includes(currentUser.id)) return false;
       
-      // The user's role must be in the assignable roles
-      if (!task.assignableTo.includes(currentUser.role)) return false;
+      if (currentUser.role === 'SPT') return false;
+      const userRole = currentUser.role as AssignableRole;
+      if (!task.assignableTo.includes(userRole)) return false;
 
       // Check if there is space for the user's role
       const assignedUsers = users.filter(u => task.assignedTo.includes(u.id));

@@ -362,12 +362,13 @@ export default function TaskDetailPage() {
                     <CardFooter className="flex flex-col items-start p-4 border-t">
                        {canChat ? (
                            <MessageInput 
-                            newMessage={newMessage}
-                            setNewMessage={setNewMessage}
-                            task={task}
-                            replyTo={replyTo}
-                            onClearReply={() => setReplyTo(null)}
-                            onSendMessage={handleSendMessage}
+                             newMessage={newMessage}
+                             setNewMessage={setNewMessage}
+                             task={task}
+                             replyTo={replyTo}
+                             replyToUserName={replyTo ? (taskUsers.find(u => u.id === replyTo.userId)?.name || 'Unknown User') : undefined}
+                             onClearReply={() => setReplyTo(null)}
+                             onSendMessage={handleSendMessage}
                            />
                        ) : (
                            <p className="text-center text-muted-foreground w-full">This task is complete. The chat is now read-only.</p>
@@ -423,11 +424,12 @@ export default function TaskDetailPage() {
 
 type RecordingStatus = 'idle' | 'recording' | 'paused';
 
-function MessageInput({newMessage, setNewMessage, task, replyTo, onClearReply, onSendMessage }: {
+function MessageInput({newMessage, setNewMessage, task, replyTo, replyToUserName, onClearReply, onSendMessage }: {
     newMessage: string;
     setNewMessage: (msg: string) => void;
     task: Task;
     replyTo: Message | null;
+    replyToUserName?: string;
     onClearReply: () => void;
     onSendMessage: (voiceNoteUrl?: string) => Promise<void>;
 }) {
@@ -498,7 +500,7 @@ function MessageInput({newMessage, setNewMessage, task, replyTo, onClearReply, o
         {replyTo && (
         <div className="w-full bg-muted p-2 rounded-t-md flex justify-between items-center text-sm">
             <div className="truncate">
-                Replying to <span className="font-semibold">{replyTo.userName}</span>: 
+                Replying to <span className="font-semibold">{replyToUserName}</span>: 
                 <span className="text-muted-foreground ml-1 italic">"{replyTo.text}"</span>
             </div>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClearReply}>

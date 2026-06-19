@@ -45,7 +45,7 @@ export function AllProfilesDashboard({ currentUser }: AllProfilesDashboardProps)
   }, []);
 
   const profilesToDisplay = useMemo(() => {
-    let baseProfiles = [];
+    let baseProfiles: User[] = [];
     if (currentUser.role === 'SPT') {
       baseProfiles = allUsers.filter(user => user.role === 'JPT' || user.role === 'Associate');
     } else if (currentUser.role === 'JPT') {

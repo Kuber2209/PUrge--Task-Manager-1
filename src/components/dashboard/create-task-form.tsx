@@ -274,10 +274,10 @@ export function CreateTaskForm({ isEdit = false, task, onOpenChange }: CreateTas
         if (!finalData.voiceNoteUrl) delete finalData.voiceNoteUrl;
         if (!finalData.description) delete finalData.description;
 
-        if (!finalData.assignableTo.includes('JPT')) {
+        if (!data.assignableTo?.includes('JPT')) {
             delete finalData.requiredJpts;
         }
-        if (!finalData.assignableTo.includes('Associate')) {
+        if (!data.assignableTo?.includes('Associate')) {
             delete finalData.requiredAssociates;
         }
 

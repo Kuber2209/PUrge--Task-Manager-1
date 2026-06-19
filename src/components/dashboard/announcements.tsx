@@ -332,7 +332,13 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
         delete (finalData as any).files;
 
         if(isEdit && announcement) {
-            const updateData: Partial<Announcement> = { ...finalData };
+            const updateData: Partial<Announcement> = {
+                title: finalData.title,
+                content: finalData.content,
+                documents: finalData.documents,
+                voiceNoteUrl: finalData.voiceNoteUrl,
+                isPinned: finalData.isPinned,
+            };
             if(currentUser.role === 'SPT') {
                 updateData.audience = data.audience as AnnouncementAudience;
             }
@@ -341,18 +347,13 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
         } else {
             const newAnnouncementData: Omit<Announcement, 'id'> = {
                 title: finalData.title,
+                content: finalData.content || '',
                 authorId: currentUser.id,
                 createdAt: new Date().toISOString(),
                 audience: 'all',
                 documents: finalData.documents,
                 isPinned: finalData.isPinned || false,
             };
-
-            if (finalData.content) {
-                newAnnouncementData.content = finalData.content;
-            } else {
-                 newAnnouncementData.content = ''; // Ensure content is not undefined
-            }
 
             if (finalData.voiceNoteUrl) {
                 newAnnouncementData.voiceNoteUrl = finalData.voiceNoteUrl;

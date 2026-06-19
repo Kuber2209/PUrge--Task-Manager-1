@@ -44,7 +44,7 @@ export function TaskItem({ task, users, onTaskUpdate }: TaskItemProps) {
     const newAssignedTo = [...task.assignedTo, currentUser.id];
     
     // Change status to "In Progress" as soon as one person accepts
-    const newStatus = 'In Progress';
+    const newStatus = 'In Progress' as const;
     
     const updatedTaskData = { status: newStatus, assignedTo: newAssignedTo };
     
