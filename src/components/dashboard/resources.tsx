@@ -389,13 +389,7 @@ function CreateResourceForm({ isEdit = false, resource, onFormOpenChange }: { is
                             value={field.value ?? []}
                             onValueChange={(files) => field.onChange(files.slice(0, 1))} // Only allow one file
                             dropzoneOptions={{
-                                accept: {
-                                    'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
-                                    'application/pdf': ['.pdf'],
-                                    'application/msword': ['.doc'],
-                                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-                                },
-                                maxSize: 10 * 1024 * 1024, // 10MB
+                                maxSize: 50 * 1024 * 1024, // 50MB
                                 multiple: false,
                                 disabled: !!linkUrl,
                             }}

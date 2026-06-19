@@ -488,13 +488,7 @@ function CreateAnnouncementForm({ isEdit = false, announcement, onFormOpenChange
                             value={field.value ?? []}
                             onValueChange={field.onChange}
                             dropzoneOptions={{
-                                accept: {
-                                    'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
-                                    'application/pdf': ['.pdf'],
-                                    'application/msword': ['.doc'],
-                                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-                                },
-                                maxSize: 10 * 1024 * 1024, // 10MB
+                                maxSize: 50 * 1024 * 1024, // 50MB
                             }}
                         />
                     )}
