@@ -19,10 +19,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { LandingHeader } from '@/components/landing-header';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address.').refine(
+  email: z.string().email('Invalid email address.'),
+  /* .refine(
     (email) => email.toLowerCase().endsWith('bits-pilani.ac.in'),
     { message: 'Only BITS Pilani email addresses are allowed.' }
-  ),
+  ), */
   password: z.string().min(6, 'Password must be at least 6 characters long.'),
 });
 
@@ -71,8 +72,14 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (!loading && user && user.status === 'active') {
+    if (!loading && user) {
+      if (user.status === 'active') {
         router.replace('/dashboard');
+      } else if (user.status === 'pending') {
+        router.replace('/pending-approval');
+      } else if (user.status === 'declined') {
+        router.replace('/access-declined');
+      }
     }
   }, [user, loading, router]);
   
@@ -99,6 +106,7 @@ export default function LoginPage() {
     setIsProcessing(true);
     try {
       await logIn(data.email, data.password);
+      setIsProcessing(false);
     } catch (err: any) {
       setError(err.message || 'An unknown error occurred.');
       setIsProcessing(false);

@@ -35,12 +35,12 @@ export async function POST(req: NextRequest) {
 
     // 2. Authorize Request (BITS Pilani email required)
     const email = user.email || "";
-    if (!email.toLowerCase().endsWith("bits-pilani.ac.in")) {
+    /* if (!email.toLowerCase().endsWith("bits-pilani.ac.in")) {
       return NextResponse.json(
         { error: "Forbidden: Only BITS Pilani email addresses are allowed to upload documents" },
         { status: 403 },
       );
-    }
+    } */
 
     const { fileName, contentType } = await req.json();
 

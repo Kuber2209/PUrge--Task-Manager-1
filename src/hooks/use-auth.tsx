@@ -54,9 +54,9 @@ async function fetchUserProfileWithRetry(
   if (!rawEmail) return null;
 
   const normalizedEmail = normalizeEmail(rawEmail);
-  if (!normalizedEmail.endsWith('bits-pilani.ac.in')) {
-    return "non-bits-email";
-  }
+  // if (!normalizedEmail.endsWith('bits-pilani.ac.in')) {
+  //   return "non-bits-email";
+  // }
 
   for (let i = 0; i < retries; i++) {
     try {

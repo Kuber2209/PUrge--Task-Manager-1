@@ -20,10 +20,11 @@ import { LandingHeader } from '@/components/landing-header';
 
 const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters long.'),
-  email: z.string().email('Invalid email address.').refine(
+  email: z.string().email('Invalid email address.'),
+  /* .refine(
     (email) => email.toLowerCase().endsWith('bits-pilani.ac.in'),
     { message: 'Only BITS Pilani email addresses are allowed.' }
-  ),
+  ), */
   password: z.string().min(6, 'Password must be at least 6 characters long.'),
 });
 
@@ -72,8 +73,14 @@ export default function SignupPage() {
   });
   
   useEffect(() => {
-    if (!loading && user && user.status === 'active') {
-      router.push('/dashboard');
+    if (!loading && user) {
+      if (user.status === 'active') {
+        router.push('/dashboard');
+      } else if (user.status === 'pending') {
+        router.push('/pending-approval');
+      } else if (user.status === 'declined') {
+        router.push('/access-declined');
+      }
     }
   }, [user, loading, router]);
 
@@ -96,8 +103,18 @@ export default function SignupPage() {
     setError(null);
     setIsProcessing(true);
     try {
-      await signUp(data.email, data.password, data.name);
-      toast({ title: 'Account Created!', description: 'Your account is being set up.' });
+      const result = await signUp(data.email, data.password, data.name);
+      if (result?.session) {
+        // Auto-logged in! The useEffect will redirect them.
+      } else {
+        // Verification email sent, or needs manual login
+        toast({ 
+          title: 'Account Created!', 
+          description: 'Your account is being set up. Please log in.' 
+        });
+        setIsProcessing(false);
+        router.push('/login');
+      }
     } catch (err: any) {
       setError(err.message || 'An unknown error occurred.');
       setIsProcessing(false);
