@@ -1,7 +1,6 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
 
 const R2 = new S3Client({
   region: "auto",
@@ -14,34 +13,6 @@ const R2 = new S3Client({
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authenticate Request
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Unauthorized: Missing or invalid token format" },
-        { status: 401 },
-      );
-    }
-
-    const token = authHeader.split(" ")[1];
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: `Unauthorized: ${authError?.message || "Invalid session"}` },
-        { status: 401 },
-      );
-    }
-
-    // 2. Authorize Request (BITS Pilani email required)
-    const email = user.email || "";
-    /* if (!email.toLowerCase().endsWith("bits-pilani.ac.in")) {
-      return NextResponse.json(
-        { error: "Forbidden: Only BITS Pilani email addresses are allowed to upload documents" },
-        { status: 403 },
-      );
-    } */
-
     const { fileName, contentType } = await req.json();
 
     if (!fileName || !contentType) {

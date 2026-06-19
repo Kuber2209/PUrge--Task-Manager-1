@@ -6,7 +6,6 @@ import { UploadCloud, File as FileIcon, X } from 'lucide-react';
 import React, { useCallback } from 'react';
 import { useDropzone, type DropzoneOptions } from 'react-dropzone';
 import { Button } from './button';
-import { Input } from './input';
 
 
 type FileUploaderProps = {
@@ -57,7 +56,7 @@ export function FileUploader({
         <p className="mt-2 text-sm text-muted-foreground">
           <span className="font-semibold">Drag and drop</span> files here, or click to select files
         </p>
-        <Input {...getInputProps()} />
+        <input {...getInputProps()} />
       </div>
 
       {(value || []).length > 0 && (
