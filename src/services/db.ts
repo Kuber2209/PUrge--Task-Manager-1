@@ -217,16 +217,6 @@ export const removeEmailFromBlacklist = async (
   if (error) throw error;
 };
 
-export const isEmailBlacklisted = async (email: string): Promise<boolean> => {
-  if (!email) return false;
-  const { data } = await supabase
-    .from("blacklist")
-    .select("email")
-    .eq("email", normalizeEmail(email))
-    .maybeSingle();
-  return !!data;
-};
-
 export const getBlacklist = async (): Promise<
   { id: string; email: string }[]
 > => {
@@ -257,16 +247,6 @@ export const removeEmailFromWhitelist = async (
     .delete()
     .eq("email", normalizeEmail(email));
   if (error) throw error;
-};
-
-export const isEmailWhitelisted = async (email: string): Promise<boolean> => {
-  if (!email) return false;
-  const { data } = await supabase
-    .from("whitelist")
-    .select("email")
-    .eq("email", normalizeEmail(email))
-    .maybeSingle();
-  return !!data;
 };
 
 export const getWhitelist = async (): Promise<

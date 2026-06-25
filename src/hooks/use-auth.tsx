@@ -13,11 +13,10 @@ import type { User } from "@/lib/types";
 import {
   createUserProfile,
   getUserProfile,
-  isEmailBlacklisted,
-  isEmailWhitelisted,
 } from "@/services/db";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { getCookie } from "@/lib/cookie";
 
 interface AuthContextType {
   user: User | null;
@@ -61,12 +60,25 @@ async function fetchUserProfileWithRetry(
   for (let i = 0; i < retries; i++) {
     try {
 
-      // Run blacklist check, whitelist check, and profile fetch in parallel
-      const [isBlacklisted, isWhitelisted, userProfile] = await Promise.all([
-        isEmailBlacklisted(normalizedEmail),
-        isEmailWhitelisted(normalizedEmail),
+      // Run blacklist/whitelist check via API route and profile fetch in parallel
+      const [emailCheck, userProfile] = await Promise.all([
+        fetch("/api/auth/check-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": getCookie("csrf-token") || "",
+          },
+          body: JSON.stringify({ email: normalizedEmail }),
+        }).then(async (res) => {
+          if (!res.ok) {
+            throw new Error(`Failed to check email status: ${res.statusText}`);
+          }
+          return res.json() as Promise<{ isBlacklisted: boolean; isWhitelisted: boolean }>;
+        }),
         getUserProfile(sbUser.id),
       ]);
+
+      const { isBlacklisted, isWhitelisted } = emailCheck;
 
       // ── 1. Blacklisted → always reject ────────────────────────────────────
       if (isBlacklisted) {
@@ -150,17 +162,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Handle the initial session on mount
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        setSupabaseUser(session.user);
-        await handleUserSession(session.user);
+    // Sync session on mount from server's secure HTTP-only cookies
+    const syncSession = async () => {
+      try {
+        const res = await fetch("/api/auth/session");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.session) {
+            const { access_token, refresh_token } = data.session;
+            const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+            if (setSessionError) {
+              console.error("setSession error during sync:", setSessionError);
+            } else if (setSessionData?.user) {
+              setSupabaseUser(setSessionData.user);
+              await handleUserSession(setSessionData.user);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync session from server cookie:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
+
+    syncSession();
 
     // Listen for subsequent auth state changes (login, logout, token refresh)
-    // Skip INITIAL_SESSION — it's already handled by getSession() above
+    // Skip INITIAL_SESSION — it's already handled by syncSession() above
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -244,39 +276,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logIn = async (email: string, pass: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: normalizeEmail(email),
-      password: pass,
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": getCookie("csrf-token") || "",
+      },
+      body: JSON.stringify({ email, password: pass }),
     });
-    if (error) throw error;
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Login failed");
+    }
+    const data = await res.json();
+    if (data.session) {
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
+      setSupabaseUser(data.session.user);
+      await handleUserSession(data.session.user);
+    }
     return data;
   };
 
   const signUp = async (email: string, pass: string, name: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email: normalizeEmail(email),
-      password: pass,
-      options: {
-        // Store name in auth metadata so fetchUserProfileWithRetry can use it
-        data: { full_name: name },
+    const res = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": getCookie("csrf-token") || "",
       },
+      body: JSON.stringify({ email, password: pass, name }),
     });
-    if (error) throw error;
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Signup failed");
+    }
+    const data = await res.json();
+    if (data.session) {
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
+      setSupabaseUser(data.session.user);
+      await handleUserSession(data.session.user);
+    }
     return data;
   };
 
   const signInWithGoogle = async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/`,
-      },
-    });
-    if (error) throw error;
-    return data;
+    window.location.href = "/api/auth/login/google";
   };
 
   const logOut = async () => {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: {
+        "X-CSRF-Token": getCookie("csrf-token") || "",
+      },
+    });
     await supabase.auth.signOut();
     setUser(null);
     setSupabaseUser(null);

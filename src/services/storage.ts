@@ -1,6 +1,7 @@
 "use client";
 
 import { supabase } from "@/lib/supabase";
+import { getCookie } from "@/lib/cookie";
 
 /**
  * Uploads a file to Cloudflare R2 via a server-side presigned URL.
@@ -25,6 +26,7 @@ export const uploadFile = async (file: File, path: string): Promise<string> => {
     method: "POST",
     headers: { 
       "Content-Type": "application/json",
+      "X-CSRF-Token": getCookie("csrf-token") || "",
       ...(token ? { "Authorization": `Bearer ${token}` } : {})
     },
     body: JSON.stringify({ fileName, contentType: file.type }),
